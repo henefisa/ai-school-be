@@ -12,7 +12,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { StudentsService } from './students.service';
-import { CreateStudentFormDto } from './dto/create-student.dto';
+import { CreateStudentDto } from './dto/create-student.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
 import { GetStudentsDto } from './dto/get-students.dto';
 import {
@@ -35,13 +35,13 @@ export class StudentsController {
   @Post()
   @ApiOperation({ summary: 'Create a new student from form data' })
   @ApiConsumes('multipart/form-data')
-  @ApiBody({ type: CreateStudentFormDto })
+  @ApiBody({ type: CreateStudentDto })
   @UseInterceptors(FileInterceptor('photo'))
-  async processStudentForm(
-    @Body() formData: CreateStudentFormDto,
+  async create(
+    @Body() dto: CreateStudentDto,
     @UploadedFile() file?: Express.Multer.File,
   ) {
-    return this.studentService.processStudentForm(formData, file);
+    return this.studentService.create(dto, file);
   }
 
   @Get()

@@ -2,10 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Student } from 'src/typeorm/entities/student.entity';
 import { Repository } from 'typeorm';
-import {
-  CreateStudentDto,
-  CreateStudentFormDto,
-} from './dto/create-student.dto';
+import { CreateStudentDto } from './dto/create-student.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
 import { GetStudentsDto } from './dto/get-students.dto';
 import { UsersService } from '../users/users.service';
@@ -28,33 +25,10 @@ export class StudentsService extends BaseService<Student> {
     super(EntityName.Student, studentRepository);
   }
 
-  async create(dto: CreateStudentDto) {
-    return this.studentRepository.manager.transaction(async (entityManager) => {
-      const student = this.studentRepository.create(dto);
-      const createdStudent = await entityManager.save(Student, student);
-
-      await this.usersService.create(
-        {
-          username: dto.username,
-          email: dto.email,
-          studentId: createdStudent.id,
-          password: dto.password,
-          role: Role.Student,
-        },
-        entityManager,
-      );
-
-      return createdStudent;
-    });
-  }
-
-  async processStudentForm(
-    formData: CreateStudentFormDto,
-    file?: Express.Multer.File,
-  ) {
+  async create(dto: CreateStudentDto, file?: Express.Multer.File) {
     return this.studentRepository.manager.transaction(async (entityManager) => {
       // 1. Validate and process parent information
-      const parentId = formData.parent.parentId;
+      const parentId = dto.parent.parentId;
 
       // Check if parent exists
       const parentExists = await this.parentRepository.findOne({
@@ -68,21 +42,21 @@ export class StudentsService extends BaseService<Student> {
       // 2. Create the student record
       const student = entityManager.create(Student, {
         // Personal info
-        firstName: formData.personal.firstName,
-        lastName: formData.personal.lastName,
-        dob: new Date(formData.personal.dob),
-        gender: formData.personal.gender,
+        firstName: dto.personal.firstName,
+        lastName: dto.personal.lastName,
+        dob: new Date(dto.personal.dob),
+        gender: dto.personal.gender,
         // Contact info
-        email: formData.contact.email,
-        contactNumber: formData.contact.phone,
+        email: dto.contact.email,
+        contactNumber: dto.contact.phone,
         // Academic info
-        grade: formData.academic.grade,
-        enrollmentDate: formData.academic.enrollmentDate
-          ? new Date(formData.academic.enrollmentDate)
+        grade: dto.academic.grade,
+        enrollmentDate: dto.academic.enrollmentDate
+          ? new Date(dto.academic.enrollmentDate)
           : undefined,
-        previousSchool: formData.academic.previousSchool,
-        academicYear: formData.academic.academicYear,
-        additionalNotes: formData.academic.additionalNotes,
+        previousSchool: dto.academic.previousSchool,
+        academicYear: dto.academic.academicYear,
+        additionalNotes: dto.academic.additionalNotes,
         // Parent reference
         parentId,
       });
@@ -91,12 +65,12 @@ export class StudentsService extends BaseService<Student> {
 
       // 3. Create address
       const address = entityManager.create(Address, {
-        addressLine1: formData.contact.street,
-        addressLine2: formData.contact.state
-          ? `${formData.contact.state}, ${formData.contact.zipCode}`
+        addressLine1: dto.contact.street,
+        addressLine2: dto.contact.state
+          ? `${dto.contact.state}, ${dto.contact.zipCode}`
           : undefined,
-        city: formData.contact.city || undefined,
-        country: formData.contact.country || undefined,
+        city: dto.contact.city,
+        country: dto.contact.country,
       });
 
       const savedAddress = await entityManager.save(Address, address);
@@ -113,10 +87,10 @@ export class StudentsService extends BaseService<Student> {
       // 5. Create user account
       await this.usersService.create(
         {
-          username: formData.personal.username,
-          email: formData.contact.email,
+          username: dto.personal.username,
+          email: dto.contact.email,
           studentId: createdStudent.id,
-          password: formData.personal.password,
+          password: dto.personal.password,
           role: Role.Student,
           photoUrl: this.getPhotoUrl(file),
         },

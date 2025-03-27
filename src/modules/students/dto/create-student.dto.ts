@@ -1,6 +1,5 @@
 import { Type } from 'class-transformer';
 import {
-  IsDate,
   IsEmail,
   IsEnum,
   IsNotEmpty,
@@ -127,7 +126,7 @@ export class ParentInfoDto {
   parentId: string;
 }
 
-export class CreateStudentFormDto {
+export class CreateStudentDto {
   @IsObject()
   @ValidateNested()
   @Type(() => PersonalInfoDto)
@@ -147,50 +146,4 @@ export class CreateStudentFormDto {
   @ValidateNested()
   @Type(() => ParentInfoDto)
   parent: ParentInfoDto;
-}
-
-// Keep the original DTO for backward compatibility
-export class CreateStudentDto {
-  @IsString()
-  @IsNotEmpty()
-  firstName: string;
-
-  @IsString()
-  @IsNotEmpty()
-  lastName: string;
-
-  @IsString()
-  @IsNotEmpty()
-  username: string;
-
-  @IsString()
-  @IsNotEmpty()
-  password: string;
-
-  @IsOptional()
-  @Type(() => Date)
-  @IsDate()
-  dob?: Date;
-
-  @IsOptional()
-  @IsEnum(Gender)
-  gender?: Gender;
-
-  @IsOptional()
-  @IsString()
-  contactNumber?: string;
-
-  @IsOptional()
-  @IsString()
-  @IsEmail()
-  email?: string;
-
-  @IsOptional()
-  @IsUUID(4)
-  parentId?: string;
-
-  @IsOptional()
-  @IsDate()
-  @Type(() => Date)
-  enrollmentDate?: Date;
 }
