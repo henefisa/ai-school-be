@@ -1,0 +1,22 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: school_postgres
+    ports:
+      - '${DB_PORT:-5432}:5432'
+    environment:
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-school_management}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - school_network
+
+networks:
+  school_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
