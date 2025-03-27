@@ -5,6 +5,7 @@ import {
   Post,
   UseGuards,
   Request,
+  Headers,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
@@ -25,10 +26,25 @@ export class AuthController {
   }
 
   @Post('login')
-  async login(
-    @Body() loginDto: LoginDto,
-  ): Promise<{ accessToken: string; user: Omit<User, 'password'> }> {
+  async login(@Body() loginDto: LoginDto): Promise<{
+    accessToken: string;
+    refreshToken: string;
+    user: Omit<User, 'password'>;
+  }> {
     return this.authService.login(loginDto);
+  }
+
+  @Post('refresh')
+  async refreshToken(
+    @Headers('refresh-token') refreshToken: string,
+  ): Promise<{ accessToken: string }> {
+    return this.authService.refreshToken(refreshToken);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('logout')
+  async logout(@Request() req: RequestWithUser): Promise<void> {
+    return this.authService.logout(req.user.id);
   }
 
   @UseGuards(JwtAuthGuard)

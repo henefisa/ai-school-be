@@ -3,8 +3,8 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
-import { User, UserRole } from '../../typeorm/entities/user.entity';
-import { RequestWithUser } from '../../shared/interfaces/request-with-user.interface';
+import { User, UserRole } from 'src/typeorm/entities/user.entity';
+import { RequestWithUser } from 'src/shared/interfaces/request-with-user.interface';
 
 describe('AuthController', () => {
   let authController: AuthController;
