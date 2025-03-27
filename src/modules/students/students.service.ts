@@ -130,10 +130,26 @@ export class StudentsService extends BaseService<Student> {
   }
 
   async getStudents(dto: GetStudentsDto) {
-    const [results, count] = await this.studentRepository.findAndCount({
-      skip: (dto.page ?? 1 - 1) * (dto.pageSize ?? 10),
-      take: dto.pageSize ?? 10,
-    });
+    const queryBuilder = this.studentRepository
+      .createQueryBuilder('student')
+      .leftJoinAndSelect('student.user', 'user')
+      .skip((dto.page ?? 1 - 1) * (dto.pageSize ?? 10))
+      .take(dto.pageSize ?? 10);
+
+    if (dto.q) {
+      queryBuilder.andWhere(
+        '(LOWER(student.firstName) LIKE LOWER(:query) OR LOWER(student.lastName) LIKE LOWER(:query))',
+        { query: `%${dto.q}%` },
+      );
+    }
+
+    if (dto.status !== undefined) {
+      queryBuilder.andWhere('user.isActive = :isActive', {
+        isActive: dto.status,
+      });
+    }
+
+    const [results, count] = await queryBuilder.getManyAndCount();
 
     return {
       results,

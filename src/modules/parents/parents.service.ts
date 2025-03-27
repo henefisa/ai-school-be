@@ -26,10 +26,30 @@ export class ParentsService extends BaseService<Parent> {
   }
 
   async getParents(dto: GetParentsDto) {
-    const [results, count] = await this.parentRepository.findAndCount({
-      skip: (dto.page ?? 1 - 1) * (dto.pageSize ?? 10),
-      take: dto.pageSize ?? 10,
-    });
+    const queryBuilder = this.parentRepository.createQueryBuilder('parent');
+
+    // Apply search filter if query parameter exists
+    if (dto.q) {
+      queryBuilder.where(
+        '(parent.first_name ILIKE :query OR parent.last_name ILIKE :query OR parent.email ILIKE :query)',
+        { query: `%${dto.q}%` },
+      );
+    }
+
+    // Join with User to get status information
+    if (dto.status !== undefined) {
+      queryBuilder
+        .leftJoin('user', 'user', 'user.parent_id = parent.id')
+        .andWhere('user.is_active = :status', { status: dto.status });
+    }
+
+    // Apply pagination
+    queryBuilder
+      .skip(dto.page && dto.pageSize ? (dto.page - 1) * dto.pageSize : 0)
+      .take(dto.pageSize || 10)
+      .orderBy('parent.created_at', 'DESC');
+
+    const [results, count] = await queryBuilder.getManyAndCount();
 
     return {
       results,
@@ -49,11 +69,12 @@ export class ParentsService extends BaseService<Parent> {
       where: { id },
     });
 
-    // Then find all children associated with this parent
-    return this.studentRepository.find({
-      where: { parentId: id },
-      relations: ['user'],
-    });
+    // Then find all children associated with this parent using query builder
+    return this.studentRepository
+      .createQueryBuilder('student')
+      .leftJoinAndSelect('student.user', 'user')
+      .where('student.parent_id = :parentId', { parentId: id })
+      .getMany();
   }
 
   async update(id: string, updateParentDto: UpdateParentDto): Promise<Parent> {
