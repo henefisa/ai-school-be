@@ -34,6 +34,9 @@ export class User extends BaseEntity {
   @Column({ nullable: true, type: 'timestamptz' })
   lastLogin: Date;
 
+  @Column({ nullable: true })
+  photoUrl: string;
+
   @OneToOne(() => Student, (student) => student.user)
   @JoinColumn({ name: 'student_id' })
   student: Student;

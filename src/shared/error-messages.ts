@@ -5,6 +5,7 @@ export enum EntityName {
   Department = 'department',
   Teacher = 'teacher',
   Student = 'student',
+  Parent = 'parent',
   Class = 'class',
   Room = 'room',
   Semester = 'semester',

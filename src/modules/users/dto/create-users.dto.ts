@@ -33,4 +33,8 @@ export class CreateUserDto {
   @IsOptional()
   @IsUUID(4)
   studentId?: string;
+
+  @IsOptional()
+  @IsString()
+  photoUrl?: string;
 }

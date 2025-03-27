@@ -24,11 +24,13 @@ export class AuthService {
           email: true,
           password: true,
           role: true,
+          isActive: true,
         },
       })
       .catch(() => {
         throw new InvalidCredentialsException();
       });
+
     const isPasswordValid = await user.validatePassword(dto.password);
 
     if (!isPasswordValid) {

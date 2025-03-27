@@ -35,6 +35,18 @@ export class Student extends BaseEntity {
   @Column({ nullable: true, type: 'date' })
   enrollmentDate: Date;
 
+  @Column({ nullable: true })
+  grade: string;
+
+  @Column({ nullable: true })
+  previousSchool: string;
+
+  @Column({ nullable: true })
+  academicYear: string;
+
+  @Column({ nullable: true, type: 'text' })
+  additionalNotes: string;
+
   @ManyToOne(() => Parent, (parent) => parent.students)
   parent: Parent;
 
