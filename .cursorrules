@@ -11,6 +11,8 @@ You are a senior TypeScript programmer with experience in the NestJS framework a
 - Use JSDoc to document public classes and methods.
 - Don't leave blank lines within a function.
 - One export per file.
+- All decorators, guards must be placed in shared folder
+- Using Argon2 instead of Bcrypt for hashing password
 
 ### Nomenclature
 

@@ -34,7 +34,7 @@ describe('AuthService', () => {
       }
     }),
     getOrThrow: jest.fn((key: string): string => {
-      const value = mockConfigService.get?.(key);
+      const value: string | undefined = mockConfigService.get?.(key);
       if (value === undefined) {
         throw new Error(`Configuration key ${key} not found`);
       }

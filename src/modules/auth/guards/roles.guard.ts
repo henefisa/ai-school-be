@@ -1,11 +1,7 @@
 import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { UserRole } from 'src/typeorm/entities/user.entity';
-import { RequestWithUser } from '../interfaces/request-with-user.interface';
 
-/**
- * Guard that checks if the user has the required roles to access a route
- */
 @Injectable()
 export class RolesGuard implements CanActivate {
   constructor(private reflector: Reflector) {}
@@ -20,13 +16,7 @@ export class RolesGuard implements CanActivate {
       return true;
     }
 
-    const request = context.switchToHttp().getRequest<RequestWithUser>();
-    const user = request.user as { role: UserRole };
-
-    if (!user || !user.role) {
-      return false;
-    }
-
+    const { user } = context.switchToHttp().getRequest();
     return requiredRoles.includes(user.role);
   }
 }
