@@ -1,137 +1,60 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { User, UserRole } from 'src/typeorm/entities/user.entity';
-import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
-import * as argon2 from 'argon2';
-import {
-  UserNotFoundException,
-  UserEmailExistsException,
-} from 'src/shared/exceptions';
+import { User } from 'src/typeorm/entities/user.entity';
+import { EntityManager, FindManyOptions, Repository } from 'typeorm';
+import { GetUsersDto } from './dto/get-users.dto';
+import { BaseService } from 'src/shared/base.service';
+import { EntityName } from 'src/shared/error-messages';
+import { CreateUserDto } from './dto/create-users.dto';
+import { ExistsException } from 'src/shared/exceptions/exists.exception';
 
-/**
- * Service responsible for managing users in the system
- */
 @Injectable()
-export class UsersService {
+export class UsersService extends BaseService<User> {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
-  ) {}
-
-  /**
-   * Creates a new user in the system
-   * @param createUserDto - Data transfer object containing user creation data
-   * @returns Promise<User> - The created user
-   * @throws UserEmailExistsException if email already exists
-   */
-  async create(createUserDto: CreateUserDto): Promise<User> {
-    const existingUser = await this.userRepository.findOne({
-      where: { email: createUserDto.email },
-    });
-
-    if (existingUser) {
-      throw new UserEmailExistsException(createUserDto.email);
-    }
-
-    const hashedPassword = await argon2.hash(createUserDto.password);
-    const user = this.userRepository.create({
-      ...createUserDto,
-      password: hashedPassword,
-    });
-
-    return this.userRepository.save(user);
+  ) {
+    super(EntityName.User, userRepository);
   }
 
-  /**
-   * Retrieves all users, optionally filtered by role
-   * @param role - Optional role to filter users by
-   * @returns Promise<User[]> - Array of users
-   */
-  async findAll(role?: UserRole): Promise<User[]> {
-    const query = this.userRepository.createQueryBuilder('user');
-
-    if (role) {
-      query.where('user.role = :role', { role });
-    }
-
-    return query.getMany();
-  }
-
-  /**
-   * Retrieves a user by their ID
-   * @param id - The user's ID
-   * @returns Promise<User> - The found user
-   * @throws UserNotFoundException if user not found
-   */
-  async findOne(id: string): Promise<User> {
+  async isUsernameAvailable(username: string, userId?: string) {
     const user = await this.userRepository.findOne({
-      where: { id },
+      where: {
+        username,
+      },
     });
 
-    if (!user) {
-      throw new UserNotFoundException(id);
+    if (user && user.id !== userId) {
+      throw new ExistsException(EntityName.User);
     }
 
-    return user;
+    return true;
   }
 
-  /**
-   * Updates a user's information
-   * @param id - The user's ID
-   * @param updateUserDto - Data transfer object containing update data
-   * @returns Promise<User> - The updated user
-   * @throws UserNotFoundException if user not found
-   */
-  async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
-    const user = await this.findOne(id);
-
-    if (updateUserDto.password) {
-      updateUserDto.password = await argon2.hash(updateUserDto.password);
-    }
-
-    Object.assign(user, updateUserDto);
-    return this.userRepository.save(user);
+  async getMany(options: FindManyOptions<User>) {
+    return this.userRepository.find(options);
   }
 
-  /**
-   * Removes a user from the system
-   * @param id - The user's ID
-   * @returns Promise<void>
-   * @throws UserNotFoundException if user not found
-   */
-  async remove(id: string): Promise<void> {
-    const user = await this.findOne(id);
-    await this.userRepository.remove(user);
+  async create(createUserDto: CreateUserDto, entityManager?: EntityManager) {
+    await this.isUsernameAvailable(createUserDto.username);
+    const user = this.userRepository.create(createUserDto);
+    const manager = this.getRepository(entityManager);
+
+    return manager.save(user);
   }
 
-  /**
-   * Retrieves all users with a specific role
-   * @param role - The role to filter by
-   * @returns Promise<User[]> - Array of users with the specified role
-   */
-  async findByRole(role: UserRole): Promise<User[]> {
-    return this.userRepository.find({
-      where: { role },
-    });
-  }
-
-  /**
-   * Retrieves a user by their email
-   * @param email - The user's email
-   * @returns Promise<User> - The found user
-   * @throws UserNotFoundException if user not found
-   */
-  async findByEmail(email: string): Promise<User> {
-    const user = await this.userRepository.findOne({
-      where: { email },
+  async findAll(dto: GetUsersDto) {
+    const [results, count] = await this.userRepository.findAndCount({
+      where: {
+        role: dto.role,
+      },
+      skip: (dto.page ?? 1 - 1) * (dto.pageSize ?? 10),
+      take: dto.pageSize ?? 10,
     });
 
-    if (!user) {
-      throw new UserNotFoundException(email);
-    }
-
-    return user;
+    return {
+      results,
+      count,
+    };
   }
 }

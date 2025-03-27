@@ -1,32 +1,33 @@
-import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
+import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { UserRole } from 'src/typeorm/entities/user.entity';
-import { RequestWithUser } from '../interfaces/request-with-user.interface';
+import { Observable } from 'rxjs';
+import { Role } from '../constants';
+import { ROLES_KEY } from '../decorators/roles.decorator';
+import { Request } from 'express';
 
-/**
- * Guard that checks if the user has the required roles to access a route
- */
 @Injectable()
-export class RolesGuard implements CanActivate {
+export class RoleGuard implements CanActivate {
   constructor(private reflector: Reflector) {}
 
-  canActivate(context: ExecutionContext): boolean {
-    const requiredRoles = this.reflector.get<UserRole[]>(
-      'roles',
+  canActivate(
+    context: ExecutionContext,
+  ): boolean | Promise<boolean> | Observable<boolean> {
+    const roles = this.reflector.getAllAndOverride<Role[]>(ROLES_KEY, [
       context.getHandler(),
-    );
+      context.getClass(),
+    ]);
 
-    if (!requiredRoles) {
+    if (!roles.length) {
       return true;
     }
 
-    const request = context.switchToHttp().getRequest<RequestWithUser>();
-    const user = request.user as { role: UserRole };
+    const request = context.switchToHttp().getRequest<Request>();
+    const user = request.user;
 
-    if (!user || !user.role) {
-      return false;
+    if (roles.includes(user.role)) {
+      return true;
     }
 
-    return requiredRoles.includes(user.role);
+    return false;
   }
 }
