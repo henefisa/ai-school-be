@@ -13,6 +13,7 @@ import { LoginDto } from './dto/login.dto';
 import { JwtAuthGuard } from 'src/shared/guards/jwt-auth.guard';
 import { User } from 'src/typeorm/entities/user.entity';
 import { RequestWithUser } from 'src/shared/interfaces/request-with-user.interface';
+import { ApiBearerAuth } from '@nestjs/swagger';
 
 @Controller('auth')
 export class AuthController {
@@ -29,7 +30,6 @@ export class AuthController {
   async login(@Body() loginDto: LoginDto): Promise<{
     accessToken: string;
     refreshToken: string;
-    user: Omit<User, 'password'>;
   }> {
     return this.authService.login(loginDto);
   }
@@ -48,6 +48,7 @@ export class AuthController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @Get('profile')
   async getProfile(
     @Request() req: RequestWithUser,

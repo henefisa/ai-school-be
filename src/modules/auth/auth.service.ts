@@ -48,7 +48,6 @@ export class AuthService {
   async login(loginDto: LoginDto): Promise<{
     accessToken: string;
     refreshToken: string;
-    user: Omit<User, 'password'>;
   }> {
     const { email, password } = loginDto;
     const user = await this.userRepository.findOne({ where: { email } });
@@ -78,13 +77,9 @@ export class AuthService {
       ),
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password: _password, ...userWithoutPassword } = user;
-
     return {
       accessToken,
       refreshToken,
-      user: userWithoutPassword as User,
     };
   }
 

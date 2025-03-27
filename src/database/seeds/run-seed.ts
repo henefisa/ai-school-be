@@ -2,9 +2,9 @@ import 'reflect-metadata';
 import { config } from 'dotenv';
 import { DataSource } from 'typeorm';
 import { User, UserRole } from '../../typeorm/entities/user.entity';
-import * as argon2 from 'argon2';
 import * as fs from 'fs';
 import * as path from 'path';
+import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 
 // Load environment variables with more debugging
 const envPath = path.resolve(process.cwd(), '.env');
@@ -32,6 +32,7 @@ const dbConfig = {
   synchronize: process.env.NODE_ENV !== 'production',
   logging: true,
   logger: 'advanced-console' as const,
+  namingStrategy: new SnakeNamingStrategy(),
 };
 
 console.log('Database configuration:', {
@@ -59,10 +60,9 @@ async function seedAdminUser(): Promise<void> {
     return;
   }
 
-  const hashedPassword = await argon2.hash('admin123');
   const adminUser = userRepository.create({
     email: adminEmail,
-    password: hashedPassword,
+    password: 'admin123',
     firstName: 'Admin',
     lastName: 'User',
     role: UserRole.ADMIN,
