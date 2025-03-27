@@ -36,6 +36,7 @@ import { DepartmentsModule } from './modules/departments/departments.module';
 import { ClassesModule } from './modules/classes/classes.module';
 import { SemestersModule } from './modules/semesters/semesters.module';
 import { RoomsModule } from './modules/rooms/rooms.module';
+import { ParentsModule } from './modules/parents/parents.module';
 
 @Module({
   imports: [
@@ -85,6 +86,7 @@ import { RoomsModule } from './modules/rooms/rooms.module';
     ClassesModule,
     RoomsModule,
     SemestersModule,
+    ParentsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
