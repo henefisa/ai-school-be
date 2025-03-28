@@ -33,15 +33,28 @@ export class StudentsController {
   constructor(private readonly studentService: StudentsService) {}
 
   @Post()
-  @ApiOperation({ summary: 'Create a new student from form data' })
+  @ApiOperation({
+    summary: 'Create a new student from form data',
+    description: `
+      To create a student with multipart/form-data, use form fields with prefix notation:
+      - personal.firstName: John
+      - personal.lastName: Doe
+      - contact.email: john.doe@example.com
+      
+      All fields should be sent as form fields, not as JSON.
+      The photo should be sent as a file in the form data.
+    `,
+  })
   @ApiConsumes('multipart/form-data')
   @ApiBody({ type: CreateStudentDto })
   @UseInterceptors(FileInterceptor('photo'))
   async create(
     @Body() dto: CreateStudentDto,
-    @UploadedFile() file?: Express.Multer.File,
+    @UploadedFile() photo?: Express.Multer.File,
   ) {
-    return this.studentService.create(dto, file);
+    dto.photo = photo;
+
+    return this.studentService.create(dto);
   }
 
   @Get()

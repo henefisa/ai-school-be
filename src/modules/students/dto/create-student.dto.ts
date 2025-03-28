@@ -1,149 +1,242 @@
-import { Type } from 'class-transformer';
+import { ApiProperty } from '@nestjs/swagger';
 import {
+  IsDateString,
   IsEmail,
   IsEnum,
   IsNotEmpty,
-  IsObject,
   IsOptional,
   IsString,
   IsUUID,
-  ValidateNested,
 } from 'class-validator';
 import { Gender } from 'src/shared/constants';
 
-export class PersonalInfoDto {
+export class CreateStudentDto {
+  // Personal Info
+  @ApiProperty({
+    description: 'Student first name',
+    example: 'John',
+  })
   @IsString()
   @IsNotEmpty()
-  firstName: string;
+  'personal.firstName': string;
 
+  @ApiProperty({
+    description: 'Student last name',
+    example: 'Doe',
+  })
   @IsString()
   @IsNotEmpty()
-  lastName: string;
+  'personal.lastName': string;
 
+  @ApiProperty({
+    description: 'Student date of birth (YYYY-MM-DD format)',
+    example: '2000-01-01',
+  })
   @IsString()
-  @Type(() => Date)
-  dob: string;
+  @IsNotEmpty()
+  @IsDateString()
+  'personal.dob': string;
 
+  @ApiProperty({
+    enum: Gender,
+    enumName: 'Gender',
+    example: Gender.Male,
+  })
   @IsEnum(Gender)
-  gender: Gender;
+  'personal.gender': Gender;
 
+  @ApiProperty({
+    description: 'Student ID',
+    required: false,
+    example: 'ST2024001',
+  })
   @IsOptional()
   @IsString()
-  studentId?: string;
+  'personal.studentId'?: string;
 
+  @ApiProperty({
+    description: 'Username for student account',
+    example: 'john.doe',
+  })
   @IsString()
   @IsNotEmpty()
-  username: string;
+  'personal.username': string;
 
+  @ApiProperty({
+    description: 'Password for student account',
+    example: 'Secure@Password123',
+  })
   @IsString()
   @IsNotEmpty()
-  password: string;
+  'personal.password': string;
 
-  // The photo will be handled via multer and passed as a file
-}
-
-export class ContactInfoDto {
+  // Contact Info
+  @ApiProperty({
+    description: 'Street address',
+    example: '123 Main Street',
+  })
   @IsString()
   @IsNotEmpty()
-  street: string;
+  'contact.street': string;
 
+  @ApiProperty({
+    description: 'City',
+    example: 'Boston',
+  })
   @IsString()
   @IsNotEmpty()
-  city: string;
+  'contact.city': string;
 
+  @ApiProperty({
+    description: 'State/Province',
+    example: 'Massachusetts',
+  })
   @IsString()
   @IsNotEmpty()
-  state: string;
+  'contact.state': string;
 
+  @ApiProperty({
+    description: 'Zip/Postal code',
+    example: '02108',
+  })
   @IsString()
   @IsNotEmpty()
-  zipCode: string;
+  'contact.zipCode': string;
 
+  @ApiProperty({
+    description: 'Country',
+    example: 'United States',
+  })
   @IsString()
   @IsNotEmpty()
-  country: string;
+  'contact.country': string;
 
+  @ApiProperty({
+    description: 'Email address',
+    example: 'john.doe@example.com',
+  })
   @IsString()
   @IsNotEmpty()
   @IsEmail()
-  email: string;
+  'contact.email': string;
 
+  @ApiProperty({
+    description: 'Phone number',
+    example: '(617) 555-1234',
+  })
   @IsString()
   @IsNotEmpty()
-  phone: string;
-}
+  'contact.phone': string;
 
-export class AcademicInfoDto {
+  // Academic Info
+  @ApiProperty({
+    description: 'Current grade level',
+    example: '10',
+  })
   @IsString()
   @IsNotEmpty()
-  grade: string;
+  'academic.grade': string;
 
+  @ApiProperty({
+    description: 'Enrollment date (YYYY-MM-DD format)',
+    required: false,
+    example: '2023-09-01',
+  })
   @IsOptional()
   @IsString()
-  enrollmentDate?: string;
+  @IsDateString()
+  'academic.enrollmentDate'?: string;
 
+  @ApiProperty({
+    description: 'Previous school',
+    required: false,
+    example: 'Springfield High School',
+  })
   @IsOptional()
   @IsString()
-  previousSchool?: string;
+  'academic.previousSchool'?: string;
 
+  @ApiProperty({
+    description: 'Academic year',
+    example: '2023-2024',
+  })
   @IsString()
   @IsNotEmpty()
-  academicYear: string;
+  'academic.academicYear': string;
 
+  @ApiProperty({
+    description: 'Additional notes',
+    required: false,
+    example: 'Student has excelled in mathematics and science',
+  })
   @IsOptional()
   @IsString()
-  additionalNotes?: string;
-}
+  'academic.additionalNotes'?: string;
 
-export class ParentInfoDto {
+  // Parent Info
+  @ApiProperty({
+    description: 'Parent full name',
+    example: 'James Doe',
+  })
   @IsString()
   @IsNotEmpty()
-  name: string;
+  'parent.name': string;
 
+  @ApiProperty({
+    description: 'Relationship to student',
+    example: 'Father',
+  })
   @IsString()
   @IsNotEmpty()
-  relationship: string;
+  'parent.relationship': string;
 
+  @ApiProperty({
+    description: 'Parent email address',
+    example: 'james.doe@example.com',
+  })
   @IsString()
   @IsNotEmpty()
   @IsEmail()
-  email: string;
+  'parent.email': string;
 
+  @ApiProperty({
+    description: 'Parent phone number',
+    example: '(617) 555-5678',
+  })
   @IsString()
   @IsNotEmpty()
-  phoneNumber: string;
+  'parent.phoneNumber': string;
 
+  @ApiProperty({
+    description: 'Parent address',
+    example: '123 Main Street, Boston, MA 02108',
+  })
   @IsString()
   @IsNotEmpty()
-  address: string;
+  'parent.address': string;
 
+  @ApiProperty({
+    description: 'Emergency contact information',
+    example: 'Jane Doe (Mother): (617) 555-9012',
+  })
   @IsString()
   @IsNotEmpty()
-  emergencyContact: string;
+  'parent.emergencyContact': string;
 
+  @ApiProperty({
+    description: 'Parent ID in the system',
+    example: '9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d',
+  })
   @IsUUID(4)
   @IsNotEmpty()
-  parentId: string;
-}
+  'parent.parentId': string;
 
-export class CreateStudentDto {
-  @IsObject()
-  @ValidateNested()
-  @Type(() => PersonalInfoDto)
-  personal: PersonalInfoDto;
-
-  @IsObject()
-  @ValidateNested()
-  @Type(() => ContactInfoDto)
-  contact: ContactInfoDto;
-
-  @IsObject()
-  @ValidateNested()
-  @Type(() => AcademicInfoDto)
-  academic: AcademicInfoDto;
-
-  @IsObject()
-  @ValidateNested()
-  @Type(() => ParentInfoDto)
-  parent: ParentInfoDto;
+  @ApiProperty({
+    type: 'string',
+    format: 'binary',
+    required: false,
+    description: 'Student photo (jpg, png, or jpeg)',
+  })
+  @IsOptional()
+  photo?: Express.Multer.File;
 }

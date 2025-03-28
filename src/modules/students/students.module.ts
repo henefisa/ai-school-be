@@ -12,7 +12,7 @@ import * as fs from 'fs';
 import { Parent } from 'src/typeorm/entities/parent.entity';
 import { Address } from 'src/typeorm/entities/address.entity';
 import { StudentAddress } from 'src/typeorm/entities/student-address.entity';
-
+import { ParentsModule } from '../parents/parents.module';
 // Create uploads directory if it doesn't exist
 const uploadsDir = path.join(process.cwd(), 'uploads/students');
 if (!fs.existsSync(uploadsDir)) {
@@ -23,6 +23,7 @@ if (!fs.existsSync(uploadsDir)) {
   imports: [
     TypeOrmModule.forFeature([Student, Parent, Address, StudentAddress]),
     UsersModule,
+    ParentsModule,
     MulterModule.register({
       storage: diskStorage({
         destination: (

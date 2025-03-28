@@ -9,54 +9,58 @@ import { UsersService } from '../users/users.service';
 import { Role } from 'src/shared/constants';
 import { BaseService } from 'src/shared/base.service';
 import { EntityName, ERROR_MESSAGES } from 'src/shared/error-messages';
-import { Parent } from 'src/typeorm/entities/parent.entity';
 import { Address } from 'src/typeorm/entities/address.entity';
 import { StudentAddress } from 'src/typeorm/entities/student-address.entity';
+import { groupStudentFormData } from 'src/shared/utils/form-data.utils';
+import { ParentsService } from '../parents/parents.service';
 
 @Injectable()
 export class StudentsService extends BaseService<Student> {
   constructor(
     @InjectRepository(Student)
     private readonly studentRepository: Repository<Student>,
-    @InjectRepository(Parent)
-    private readonly parentRepository: Repository<Parent>,
+    private readonly parentsService: ParentsService,
     private readonly usersService: UsersService,
   ) {
     super(EntityName.Student, studentRepository);
   }
 
-  async create(dto: CreateStudentDto, file?: Express.Multer.File) {
+  async create(dto: CreateStudentDto) {
     return this.studentRepository.manager.transaction(async (entityManager) => {
+      // Group form data by prefixes for easier access
+      const groupedData = groupStudentFormData(dto);
+
       // 1. Validate and process parent information
-      const parentId = dto.parent.parentId;
+      const parentId = groupedData.parent.parentId;
 
-      // Check if parent exists
-      const parentExists = await this.parentRepository.findOne({
-        where: { id: parentId },
-      });
-
-      if (!parentExists) {
-        throw new NotFoundException(ERROR_MESSAGES.notFound(EntityName.Parent));
-      }
+      await this.parentsService
+        .getOneOrThrow({
+          where: { id: parentId },
+        })
+        .catch(() => {
+          throw new NotFoundException(
+            ERROR_MESSAGES.notFound(EntityName.Parent),
+          );
+        });
 
       // 2. Create the student record
       const student = entityManager.create(Student, {
         // Personal info
-        firstName: dto.personal.firstName,
-        lastName: dto.personal.lastName,
-        dob: new Date(dto.personal.dob),
-        gender: dto.personal.gender,
+        firstName: groupedData.personal.firstName,
+        lastName: groupedData.personal.lastName,
+        dob: new Date(groupedData.personal.dob),
+        gender: groupedData.personal.gender,
         // Contact info
-        email: dto.contact.email,
-        contactNumber: dto.contact.phone,
+        email: groupedData.contact.email,
+        contactNumber: groupedData.contact.phone,
         // Academic info
-        grade: dto.academic.grade,
-        enrollmentDate: dto.academic.enrollmentDate
-          ? new Date(dto.academic.enrollmentDate)
+        grade: groupedData.academic.grade,
+        enrollmentDate: groupedData.academic.enrollmentDate
+          ? new Date(groupedData.academic.enrollmentDate)
           : undefined,
-        previousSchool: dto.academic.previousSchool,
-        academicYear: dto.academic.academicYear,
-        additionalNotes: dto.academic.additionalNotes,
+        previousSchool: groupedData.academic.previousSchool,
+        academicYear: groupedData.academic.academicYear,
+        additionalNotes: groupedData.academic.additionalNotes,
         // Parent reference
         parentId,
       });
@@ -65,12 +69,12 @@ export class StudentsService extends BaseService<Student> {
 
       // 3. Create address
       const address = entityManager.create(Address, {
-        addressLine1: dto.contact.street,
-        addressLine2: dto.contact.state
-          ? `${dto.contact.state}, ${dto.contact.zipCode}`
+        addressLine1: groupedData.contact.street,
+        addressLine2: groupedData.contact.state
+          ? `${groupedData.contact.state}, ${groupedData.contact.zipCode}`
           : undefined,
-        city: dto.contact.city,
-        country: dto.contact.country,
+        city: groupedData.contact.city,
+        country: groupedData.contact.country,
       });
 
       const savedAddress = await entityManager.save(Address, address);
@@ -87,12 +91,12 @@ export class StudentsService extends BaseService<Student> {
       // 5. Create user account
       await this.usersService.create(
         {
-          username: dto.personal.username,
-          email: dto.contact.email,
+          username: groupedData.personal.username,
+          email: groupedData.contact.email,
           studentId: createdStudent.id,
-          password: dto.personal.password,
+          password: groupedData.personal.password,
           role: Role.Student,
-          photoUrl: this.getPhotoUrl(file),
+          photoUrl: this.getPhotoUrl(dto.photo),
         },
         entityManager,
       );
