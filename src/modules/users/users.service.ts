@@ -57,4 +57,29 @@ export class UsersService extends BaseService<User> {
       count,
     };
   }
+
+  /**
+   * Update a user's information
+   */
+  async update(
+    id: string,
+    updateData: Partial<User>,
+    entityManager?: EntityManager,
+  ) {
+    const user = await this.getOneOrThrow({
+      where: { id },
+    });
+
+    // If username is being updated, check if it's available
+    if (updateData.username && updateData.username !== user.username) {
+      await this.isUsernameAvailable(updateData.username, id);
+    }
+
+    // Update user fields
+    Object.assign(user, updateData);
+
+    // Save using either provided entity manager or repository
+    const manager = this.getRepository(entityManager);
+    return manager.save(user);
+  }
 }

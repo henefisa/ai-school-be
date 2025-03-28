@@ -14,6 +14,7 @@ You are a senior TypeScript programmer with experience in the NestJS framework a
 - All decorators, guards must be placed in shared folder
 - Using Argon2 instead of Bcrypt for hashing password
 - Using pnpm as package manager
+- When write dto or swagger, make sure that you will add some example value for the field
 
 ### Nomenclature
 
@@ -122,3 +123,4 @@ You are a senior TypeScript programmer with experience in the NestJS framework a
 
 ### Formatting
 - Make sure you formatted the file after making changes
+- Run pnpm format:fix if you change any code in a file

@@ -7,9 +7,11 @@ import {
   Patch,
   Post,
   Query,
+  Req,
   UploadedFile,
   UseGuards,
   UseInterceptors,
+  BadRequestException,
 } from '@nestjs/common';
 import { StudentsService } from './students.service';
 import { CreateStudentDto } from './dto/create-student.dto';
@@ -20,10 +22,14 @@ import {
   ApiBody,
   ApiConsumes,
   ApiOperation,
+  ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/shared/guards/jwt-auth.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { Roles } from 'src/shared/decorators/roles.decorator';
+import { Role } from 'src/shared/constants';
+import { Request } from 'express';
 
 @ApiTags('students')
 @ApiBearerAuth()
@@ -48,6 +54,7 @@ export class StudentsController {
   @ApiConsumes('multipart/form-data')
   @ApiBody({ type: CreateStudentDto })
   @UseInterceptors(FileInterceptor('photo'))
+  @Roles(Role.Admin)
   async create(
     @Body() dto: CreateStudentDto,
     @UploadedFile() photo?: Express.Multer.File,
@@ -79,5 +86,62 @@ export class StudentsController {
   @ApiOperation({ summary: 'Delete a student' })
   remove(@Param('id') id: string): Promise<void> {
     return this.studentService.delete(id);
+  }
+
+  @Patch(':id/photo')
+  @ApiOperation({
+    summary: 'Update student photo',
+    description:
+      'Students can update their own photo, admins can update any student photo',
+  })
+  @ApiParam({ name: 'id', description: 'Student ID' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        photo: {
+          type: 'string',
+          format: 'binary',
+          description: 'Student photo (JPG, JPEG, or PNG)',
+        },
+      },
+    },
+  })
+  @Roles(Role.Student, Role.Admin)
+  @UseInterceptors(
+    FileInterceptor('photo', {
+      limits: {
+        fileSize: 5 * 1024 * 1024, // 5MB limit
+      },
+      fileFilter: (req, file, callback) => {
+        // Allow only images
+        if (!file.mimetype.match(/^image\/(jpeg|jpg|png)$/)) {
+          return callback(
+            new BadRequestException(
+              'Only JPG, JPEG, and PNG files are allowed',
+            ),
+            false,
+          );
+        }
+        callback(null, true);
+      },
+    }),
+  )
+  async updatePhoto(
+    @Param('id') id: string,
+    @UploadedFile() photo: Express.Multer.File,
+    @Req() req: Request,
+  ) {
+    // Check if user is updating their own photo or is an admin
+    const currentUser = req.user;
+    const canUpdateAnyPhoto = currentUser.role === Role.Admin;
+
+    return this.studentService.updatePhoto(
+      id,
+      photo,
+      currentUser.id,
+      canUpdateAnyPhoto,
+    );
   }
 }

@@ -235,7 +235,7 @@ export class CreateStudentDto {
     type: 'string',
     format: 'binary',
     required: false,
-    description: 'Student photo (jpg, png, or jpeg)',
+    description: 'Student photo (JPG, JPEG, or PNG)',
   })
   @IsOptional()
   photo?: Express.Multer.File;
