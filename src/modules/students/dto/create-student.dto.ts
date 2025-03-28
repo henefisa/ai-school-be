@@ -173,56 +173,6 @@ export class CreateStudentDto {
   @IsString()
   'academic.additionalNotes'?: string;
 
-  // Parent Info
-  @ApiProperty({
-    description: 'Parent full name',
-    example: 'James Doe',
-  })
-  @IsString()
-  @IsNotEmpty()
-  'parent.name': string;
-
-  @ApiProperty({
-    description: 'Relationship to student',
-    example: 'Father',
-  })
-  @IsString()
-  @IsNotEmpty()
-  'parent.relationship': string;
-
-  @ApiProperty({
-    description: 'Parent email address',
-    example: 'james.doe@example.com',
-  })
-  @IsString()
-  @IsNotEmpty()
-  @IsEmail()
-  'parent.email': string;
-
-  @ApiProperty({
-    description: 'Parent phone number',
-    example: '(617) 555-5678',
-  })
-  @IsString()
-  @IsNotEmpty()
-  'parent.phoneNumber': string;
-
-  @ApiProperty({
-    description: 'Parent address',
-    example: '123 Main Street, Boston, MA 02108',
-  })
-  @IsString()
-  @IsNotEmpty()
-  'parent.address': string;
-
-  @ApiProperty({
-    description: 'Emergency contact information',
-    example: 'Jane Doe (Mother): (617) 555-9012',
-  })
-  @IsString()
-  @IsNotEmpty()
-  'parent.emergencyContact': string;
-
   @ApiProperty({
     description: 'Parent ID in the system',
     example: '9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d',
