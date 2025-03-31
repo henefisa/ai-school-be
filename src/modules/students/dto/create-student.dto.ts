@@ -70,6 +70,15 @@ export class CreateStudentDto {
   @IsNotEmpty()
   'personal.password': string;
 
+  @ApiProperty({
+    type: 'string',
+    format: 'binary',
+    required: false,
+    description: 'Student photo (JPG, JPEG, or PNG)',
+  })
+  @IsOptional()
+  'personal.photo'?: Express.Multer.File;
+
   // Contact Info
   @ApiProperty({
     description: 'Street address',
@@ -180,13 +189,4 @@ export class CreateStudentDto {
   @IsUUID(4)
   @IsNotEmpty()
   'parent.parentId': string;
-
-  @ApiProperty({
-    type: 'string',
-    format: 'binary',
-    required: false,
-    description: 'Student photo (JPG, JPEG, or PNG)',
-  })
-  @IsOptional()
-  photo?: Express.Multer.File;
 }

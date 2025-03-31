@@ -53,13 +53,13 @@ export class StudentsController {
   })
   @ApiConsumes('multipart/form-data')
   @ApiBody({ type: CreateStudentDto })
-  @UseInterceptors(FileInterceptor('photo'))
+  @UseInterceptors(FileInterceptor('personal.photo'))
   @Roles(Role.Admin)
   async create(
     @Body() dto: CreateStudentDto,
     @UploadedFile() photo?: Express.Multer.File,
   ) {
-    dto.photo = photo;
+    dto['personal.photo'] = photo;
 
     return this.studentService.create(dto);
   }

@@ -34,7 +34,7 @@ export class StudentsService extends BaseService<Student> {
 
   async create(dto: CreateStudentDto) {
     // Keep track of the uploaded file to delete if there's an error
-    let uploadedFile: Express.Multer.File | undefined = dto.photo;
+    let uploadedFile: Express.Multer.File | undefined = dto['personal.photo'];
 
     try {
       return await this.studentRepository.manager.transaction(
@@ -108,7 +108,7 @@ export class StudentsService extends BaseService<Student> {
               studentId: createdStudent.id,
               password: groupedData.personal.password,
               role: Role.Student,
-              photoUrl: this.getPhotoUrl(dto.photo),
+              photoUrl: this.getPhotoUrl(dto['personal.photo']),
             },
             entityManager,
           );
