@@ -66,8 +66,8 @@ export class StudentsController {
 
   @Get()
   @ApiOperation({ summary: 'Get all students' })
-  async getStudents(@Query() getStudentsDto: GetStudentsDto) {
-    return this.studentService.getStudents(getStudentsDto);
+  async getStudents(@Query() dto: GetStudentsDto) {
+    return this.studentService.getStudents(dto);
   }
 
   @Get(':id')
