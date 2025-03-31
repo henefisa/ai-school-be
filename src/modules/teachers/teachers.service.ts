@@ -13,7 +13,15 @@ import { DepartmentsService } from '../departments/departments.service';
 import { AddressesService } from '../addresses/addresses.service';
 import { CreateAddressDto } from '../addresses/dto/create-address.dto';
 import { groupTeacherFormData } from 'src/shared/utils/form-data.utils';
-
+import * as fs from 'fs';
+import * as path from 'path';
+import { ClassAssignment } from 'src/typeorm/entities/class-assignment.entity';
+import { Department } from 'src/typeorm/entities/department.entity';
+import { TeacherAddress } from 'src/typeorm/entities/teacher-address.entity';
+import { StudentAddress } from 'src/typeorm/entities/student-address.entity';
+import { Address } from 'src/typeorm/entities/address.entity';
+import { ParentAddress } from 'src/typeorm/entities/parent-address.entity';
+import { User } from 'src/typeorm/entities/user.entity';
 @Injectable()
 export class TeachersService extends BaseService<Teacher> {
   constructor(
@@ -164,7 +172,93 @@ export class TeachersService extends BaseService<Teacher> {
   }
 
   async delete(id: string) {
-    await this.teacherRepository.softDelete({ id });
+    return this.teacherRepository.manager.transaction(async (entityManager) => {
+      // 1. Find the teacher with related entities to ensure it exists and gather related info
+      const teacher = await this.getOneOrThrow({
+        where: { id },
+        relations: {
+          user: true,
+          teacherAddresses: {
+            address: true,
+          },
+          assignments: true,
+        },
+      });
+
+      // 2. Delete the teacher's photo if it exists
+      if (teacher.user?.photoUrl) {
+        const filename = teacher.user.photoUrl.split('/').pop();
+        if (filename) {
+          try {
+            // Delete the file from the uploads directory
+            const filePath = path.join(
+              process.cwd(),
+              'uploads/teachers',
+              filename,
+            );
+
+            if (fs.existsSync(filePath)) {
+              fs.unlinkSync(filePath);
+            }
+          } catch (error: unknown) {
+            // Log error but continue with deletion
+            console.error('Failed to delete teacher photo:', error);
+          }
+        }
+      }
+
+      // 3. Soft delete related user record
+      if (teacher.user) {
+        await entityManager.softDelete(User, { id: teacher.user.id });
+      }
+
+      // 4. Delete teacher-address relationships and orphaned addresses
+      if (teacher.teacherAddresses?.length > 0) {
+        // Get all address IDs associated with this teacher
+        const addressIds = teacher.teacherAddresses.map((ta) => ta.addressId);
+
+        // Delete teacher-address relationships
+        await entityManager.softDelete(TeacherAddress, { teacherId: id });
+
+        // Check and delete addresses that are no longer referenced
+        for (const addressId of addressIds) {
+          const addressInUse = await entityManager.count(TeacherAddress, {
+            where: { addressId },
+          });
+
+          const addressUsedByStudent = await entityManager.count(
+            StudentAddress,
+            {
+              where: { addressId },
+            },
+          );
+
+          const addressUsedByParent = await entityManager.count(ParentAddress, {
+            where: { addressId },
+          });
+
+          // If address is not used by any other entity, soft delete it
+          if (
+            addressInUse === 0 &&
+            addressUsedByStudent === 0 &&
+            addressUsedByParent === 0
+          ) {
+            await entityManager.softDelete(Address, { id: addressId });
+          }
+        }
+      }
+
+      // 5. Soft delete related class assignments
+      if (teacher.assignments?.length > 0) {
+        await entityManager.softDelete(ClassAssignment, { teacherId: id });
+      }
+
+      // 6. If this teacher is a department head, nullify the references
+      await entityManager.update(Department, { head: id }, { head: null });
+
+      // 8. Finally, soft delete the teacher record
+      await entityManager.softDelete(Teacher, { id });
+    });
   }
 
   async getTeachers(dto: GetTeachersDto) {
@@ -203,7 +297,12 @@ export class TeachersService extends BaseService<Teacher> {
   async getTeacherById(id: string): Promise<Teacher> {
     return this.getOneOrThrow({
       where: { id },
-      relations: ['teacherAddresses', 'teacherAddresses.address', 'user'],
+      relations: {
+        teacherAddresses: {
+          address: true,
+        },
+        user: true,
+      },
     });
   }
 }

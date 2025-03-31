@@ -6,7 +6,7 @@ import { Parent } from './parent.entity';
 @Entity('parent_addresses')
 export class ParentAddress extends BaseEntity {
   @Column({ nullable: true, type: 'uuid' })
-  studentId: string;
+  addressId: string;
 
   @Column({ nullable: true, type: 'uuid' })
   parentId: string;

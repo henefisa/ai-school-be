@@ -20,7 +20,7 @@ export class Department extends BaseEntity {
     type: 'uuid',
     comment: 'UUID of the department head teacher',
   })
-  head: string;
+  head: string | null;
 
   @OneToMany(() => Course, (course) => course.department)
   courses: Course[];
