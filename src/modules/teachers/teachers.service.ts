@@ -27,32 +27,64 @@ export class TeachersService extends BaseService<Teacher> {
 
   async create(dto: CreateTeacherDto) {
     return this.teacherRepository.manager.transaction(async (entityManager) => {
-      // Verify department exists if departmentId is provided
-      if (dto.departmentId) {
-        await this.departmentsService.verifyDepartmentExists(dto.departmentId);
+      // Extract teacher data
+      const teacherData: Partial<Teacher> = {
+        // Personal information
+        firstName: dto['personal.firstName'],
+        lastName: dto['personal.lastName'],
+        dob: new Date(dto['personal.dob']),
+        gender: dto['personal.gender'],
+
+        // Contact information
+        email: dto['contact.email'],
+        contactNumber: dto['contact.phoneNumber'],
+
+        // Professional information
+        departmentId: dto['professional.departmentId'],
+        hireDate: new Date(dto['professional.joinDate']),
+      };
+
+      // Handle photo data
+      if (dto['personal.photo']) {
+        const photoFile = dto['personal.photo'] as unknown as {
+          filename?: string;
+        };
+
+        if (photoFile && photoFile.filename) {
+          // Store the filename in a custom field or metadata if needed
+          // Note: Teacher entity doesn't have a photo field by default
+        }
       }
 
-      const teacher = this.teacherRepository.create(dto);
+      // Verify department exists if departmentId is provided
+      if (teacherData.departmentId) {
+        await this.departmentsService.verifyDepartmentExists(
+          teacherData.departmentId,
+        );
+      }
+
+      // Create and save teacher
+      const teacher = this.teacherRepository.create(teacherData);
       const createdTeacher = await entityManager.save(Teacher, teacher);
 
       // Create user account for the teacher
       await this.usersService.create(
         {
-          username: dto.username,
-          email: dto.email,
+          username: dto['personal.username'],
+          email: dto['contact.email'],
           teacherId: createdTeacher.id,
-          password: dto.password,
+          password: dto['personal.password'],
           role: Role.Teacher,
         },
         entityManager,
       );
 
-      // Handle teacher's address
+      // Create address using AddressesService
       const addressDto: CreateAddressDto = {
-        addressLine1: dto.address.addressLine1,
-        addressLine2: dto.address.addressLine2,
-        city: dto.address.city,
-        country: dto.address.country,
+        addressLine1: dto['contact.addressLine1'] || '',
+        addressLine2: dto['contact.addressLine2'],
+        city: dto['contact.city'],
+        country: dto['contact.country'],
       };
 
       const savedAddress = await this.addressesService.create(
@@ -64,7 +96,7 @@ export class TeachersService extends BaseService<Teacher> {
       await this.addressesService.associateWithTeacher(
         savedAddress.id,
         createdTeacher.id,
-        'Primary',
+        dto['contact.addressType'] || 'Primary',
         entityManager,
       );
 
@@ -73,57 +105,131 @@ export class TeachersService extends BaseService<Teacher> {
   }
 
   async update(id: string, dto: UpdateTeacherDto) {
-    // Verify department exists if departmentId is provided
-    if (dto.departmentId) {
-      await this.departmentsService.verifyDepartmentExists(dto.departmentId);
-    }
-
-    const teacher = await this.getOneOrThrow({
-      where: { id },
-      relations: {
-        teacherAddresses: {
-          address: true,
-        },
-      },
-    });
-
-    Object.assign(teacher, dto);
-
-    // Handle address update if provided
-    if (dto.address) {
-      const teacherAddresses =
-        await this.addressesService.getAddressesForTeacher(id);
-      const existingAddress = teacherAddresses[0];
-
-      if (existingAddress) {
-        // Update existing address
-        await this.addressesService.update(existingAddress.id, {
-          addressLine1: dto.address.addressLine1,
-          addressLine2: dto.address.addressLine2,
-          city: dto.address.city,
-          country: dto.address.country,
-        });
-      } else {
-        // Create new address
-        const addressDto: CreateAddressDto = {
-          addressLine1: dto.address.addressLine1 || '',
-          addressLine2: dto.address.addressLine2,
-          city: dto.address.city,
-          country: dto.address.country,
-        };
-
-        const savedAddress = await this.addressesService.create(addressDto);
-
-        // Associate address with teacher
-        await this.addressesService.associateWithTeacher(
-          savedAddress.id,
-          teacher.id,
-          'Primary',
+    return this.teacherRepository.manager.transaction(async (entityManager) => {
+      // Verify department exists if departmentId is provided
+      if (dto['professional.departmentId']) {
+        await this.departmentsService.verifyDepartmentExists(
+          dto['professional.departmentId'],
         );
       }
-    }
 
-    return this.teacherRepository.save(teacher);
+      const teacher = await this.getOneOrThrow({
+        where: { id },
+        relations: {
+          teacherAddresses: {
+            address: true,
+          },
+        },
+      });
+
+      // Extract teacher data to update
+      const teacherData: Partial<Teacher> = {};
+
+      // Personal information
+      if (dto['personal.firstName'])
+        teacherData.firstName = dto['personal.firstName'];
+      if (dto['personal.lastName'])
+        teacherData.lastName = dto['personal.lastName'];
+      if (dto['personal.dob']) teacherData.dob = new Date(dto['personal.dob']);
+      if (dto['personal.gender']) teacherData.gender = dto['personal.gender'];
+
+      // Contact information
+      if (dto['contact.email']) teacherData.email = dto['contact.email'];
+      if (dto['contact.phoneNumber'])
+        teacherData.contactNumber = dto['contact.phoneNumber'];
+
+      // Professional information
+      if (dto['professional.departmentId'])
+        teacherData.departmentId = dto['professional.departmentId'];
+      if (dto['professional.joinDate'])
+        teacherData.hireDate = new Date(dto['professional.joinDate']);
+
+      // Apply updates to teacher
+      Object.assign(teacher, teacherData);
+      const updatedTeacher = await entityManager.save(Teacher, teacher);
+
+      // Handle address update
+      const teacherAddresses =
+        await this.addressesService.getAddressesForTeacher(id);
+      const existingAddress =
+        teacherAddresses.length > 0 ? teacherAddresses[0] : null;
+
+      // Check if any address field is provided
+      const hasAddressUpdate =
+        dto['contact.addressLine1'] !== undefined ||
+        dto['contact.addressLine2'] !== undefined ||
+        dto['contact.city'] !== undefined ||
+        dto['contact.country'] !== undefined;
+
+      if (hasAddressUpdate) {
+        if (existingAddress) {
+          // Update existing address
+          await this.addressesService.update(existingAddress.id, {
+            addressLine1:
+              dto['contact.addressLine1'] || existingAddress.addressLine1,
+            addressLine2: dto['contact.addressLine2'],
+            city: dto['contact.city'],
+            country: dto['contact.country'],
+          });
+        } else if (dto['contact.addressLine1']) {
+          // Create new address - addressLine1 is required
+          const addressDto: CreateAddressDto = {
+            addressLine1: dto['contact.addressLine1'],
+            addressLine2: dto['contact.addressLine2'],
+            city: dto['contact.city'],
+            country: dto['contact.country'],
+          };
+
+          const savedAddress = await this.addressesService.create(
+            addressDto,
+            entityManager,
+          );
+
+          // Associate address with teacher
+          await this.addressesService.associateWithTeacher(
+            savedAddress.id,
+            teacher.id,
+            dto['contact.addressType'] || 'Primary',
+            entityManager,
+          );
+        }
+      } else if (dto.address) {
+        // Handle legacy address object if provided
+        if (existingAddress) {
+          // Update existing address
+          await this.addressesService.update(existingAddress.id, {
+            addressLine1:
+              dto.address.addressLine1 || existingAddress.addressLine1,
+            addressLine2: dto.address.addressLine2,
+            city: dto.address.city,
+            country: dto.address.country,
+          });
+        } else if (dto.address.addressLine1) {
+          // Create new address
+          const addressDto: CreateAddressDto = {
+            addressLine1: dto.address.addressLine1,
+            addressLine2: dto.address.addressLine2,
+            city: dto.address.city,
+            country: dto.address.country,
+          };
+
+          const savedAddress = await this.addressesService.create(
+            addressDto,
+            entityManager,
+          );
+
+          // Associate address with teacher
+          await this.addressesService.associateWithTeacher(
+            savedAddress.id,
+            teacher.id,
+            'Primary',
+            entityManager,
+          );
+        }
+      }
+
+      return updatedTeacher;
+    });
   }
 
   async delete(id: string) {

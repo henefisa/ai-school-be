@@ -7,9 +7,12 @@ import {
   Patch,
   Post,
   Query,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiBearerAuth, ApiConsumes, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/shared/guards/jwt-auth.guard';
 import { TeachersService } from './teachers.service';
 import { CreateTeacherDto } from './dto/create-teacher.dto';
@@ -24,7 +27,16 @@ export class TeachersController {
   constructor(private readonly teacherService: TeachersService) {}
 
   @Post()
-  async createTeacher(@Body() dto: CreateTeacherDto) {
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(FileInterceptor('personal.photo'))
+  async createTeacher(
+    @Body() dto: CreateTeacherDto,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    if (file) {
+      dto['personal.photo'] = file;
+    }
+
     return this.teacherService.create(dto);
   }
 
@@ -39,7 +51,17 @@ export class TeachersController {
   }
 
   @Patch(':id')
-  async updateTeacher(@Param('id') id: string, @Body() dto: UpdateTeacherDto) {
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(FileInterceptor('personal.photo'))
+  async updateTeacher(
+    @Param('id') id: string,
+    @Body() dto: UpdateTeacherDto,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    if (file) {
+      dto['personal.photo'] = file;
+    }
+
     return this.teacherService.update(id, dto);
   }
 

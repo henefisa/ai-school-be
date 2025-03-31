@@ -1,83 +1,243 @@
 import { Type } from 'class-transformer';
+import { ApiProperty } from '@nestjs/swagger';
 import {
-  IsDate,
+  IsDateString,
   IsEmail,
   IsEnum,
   IsNotEmpty,
-  IsNumber,
   IsOptional,
   IsString,
   IsUUID,
   ValidateNested,
 } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
-import { Gender } from 'src/shared/constants';
+import { Gender, Title, EmploymentType } from 'src/shared/constants';
 import { TeacherAddressDto } from './teacher-address.dto';
 
 export class CreateTeacherDto {
-  @ApiProperty({ example: 'John' })
-  @IsString()
+  // Personal Info
+  @ApiProperty({
+    enum: Title,
+    enumName: 'Title',
+    example: Title.Mr,
+    description: 'Teacher title',
+  })
+  @IsEnum(Title)
   @IsNotEmpty()
-  firstName: string;
-
-  @ApiProperty({ example: 'Doe' })
-  @IsString()
-  @IsNotEmpty()
-  lastName: string;
-
-  @ApiProperty({ example: 'johndoe' })
-  @IsString()
-  @IsNotEmpty()
-  username: string;
-
-  @ApiProperty({ example: 'StrongP@ssw0rd' })
-  @IsString()
-  @IsNotEmpty()
-  password: string;
-
-  @ApiProperty({ example: '1980-01-01', required: false })
-  @IsOptional()
-  @Type(() => Date)
-  @IsDate()
-  dob?: Date;
-
-  @ApiProperty({ example: '2023-01-15', required: false })
-  @IsOptional()
-  @Type(() => Date)
-  @IsDate()
-  hireDate?: Date;
-
-  @ApiProperty({ example: 50000, required: false })
-  @IsOptional()
-  @Type(() => Number)
-  @IsNumber()
-  salary?: number;
-
-  @ApiProperty({ enum: Gender, example: Gender.Male, required: false })
-  @IsOptional()
-  @IsEnum(Gender)
-  gender?: Gender;
-
-  @ApiProperty({ example: '+1234567890', required: false })
-  @IsOptional()
-  @IsString()
-  contactNumber?: string;
-
-  @ApiProperty({ example: 'john.doe@example.com', required: false })
-  @IsOptional()
-  @IsString()
-  @IsEmail()
-  email?: string;
+  'personal.title': Title;
 
   @ApiProperty({
-    example: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+    description: 'Employee ID',
+    example: 'EMP2024001',
+  })
+  @IsString()
+  @IsNotEmpty()
+  'personal.employeeId': string;
+
+  @ApiProperty({
+    description: 'Teacher first name',
+    example: 'John',
+  })
+  @IsString()
+  @IsNotEmpty()
+  'personal.firstName': string;
+
+  @ApiProperty({
+    description: 'Teacher last name',
+    example: 'Smith',
+  })
+  @IsString()
+  @IsNotEmpty()
+  'personal.lastName': string;
+
+  @ApiProperty({
+    description: 'Date of birth (YYYY-MM-DD format)',
+    example: '1980-05-15',
+  })
+  @IsString()
+  @IsNotEmpty()
+  @IsDateString()
+  'personal.dob': string;
+
+  @ApiProperty({
+    enum: Gender,
+    enumName: 'Gender',
+    example: Gender.Male,
+  })
+  @IsEnum(Gender)
+  @IsNotEmpty()
+  'personal.gender': Gender;
+
+  @ApiProperty({
+    type: 'string',
+    format: 'binary',
+    required: false,
+    description: 'Teacher photo (JPG, JPEG, or PNG)',
+  })
+  @IsOptional()
+  'personal.photo'?: Express.Multer.File;
+
+  @ApiProperty({
+    description: 'Username for teacher account',
+    example: 'john.smith',
+  })
+  @IsString()
+  @IsNotEmpty()
+  'personal.username': string;
+
+  @ApiProperty({
+    description: 'Password for teacher account',
+    example: 'Secure@Password123',
+  })
+  @IsString()
+  @IsNotEmpty()
+  'personal.password': string;
+
+  // Contact Info
+  @ApiProperty({
+    description: 'Street address',
+    example: '123 Main Street',
+  })
+  @IsString()
+  @IsNotEmpty()
+  'contact.addressLine1': string;
+
+  @ApiProperty({
+    description: 'Additional address information',
+    example: 'Apartment 4B',
     required: false,
   })
   @IsOptional()
+  @IsString()
+  'contact.addressLine2'?: string;
+
+  @ApiProperty({
+    description: 'City',
+    example: 'Boston',
+  })
+  @IsString()
+  @IsNotEmpty()
+  'contact.city': string;
+
+  @ApiProperty({
+    description: 'State/Province',
+    example: 'Massachusetts',
+  })
+  @IsString()
+  @IsNotEmpty()
+  'contact.state': string;
+
+  @ApiProperty({
+    description: 'Zip/Postal code',
+    example: '02108',
+  })
+  @IsString()
+  @IsNotEmpty()
+  'contact.zipCode': string;
+
+  @ApiProperty({
+    description: 'Country',
+    example: 'United States',
+  })
+  @IsString()
+  @IsNotEmpty()
+  'contact.country': string;
+
+  @ApiProperty({
+    description: 'Email address',
+    example: 'john.smith@example.com',
+  })
+  @IsString()
+  @IsNotEmpty()
+  @IsEmail()
+  'contact.email': string;
+
+  @ApiProperty({
+    description: 'Phone number',
+    example: '(617) 555-1234',
+  })
+  @IsString()
+  @IsNotEmpty()
+  'contact.phoneNumber': string;
+
+  @ApiProperty({
+    description: 'Emergency contact',
+    example: '(617) 555-5678',
+  })
+  @IsString()
+  @IsNotEmpty()
+  'contact.emergencyContact': string;
+
+  @ApiProperty({
+    description: 'Address type (e.g., Home, Work)',
+    example: 'Home',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  'contact.addressType'?: string;
+
+  // Professional Info
+  @ApiProperty({
+    description: 'Department ID',
+    example: '9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d',
+  })
   @IsUUID(4)
-  departmentId?: string;
+  @IsNotEmpty()
+  'professional.departmentId': string;
+
+  @ApiProperty({
+    description: 'Position or title',
+    example: 'Senior Mathematics Teacher',
+  })
+  @IsString()
+  @IsNotEmpty()
+  'professional.position': string;
+
+  @ApiProperty({
+    description: 'Join date (YYYY-MM-DD format)',
+    example: '2020-08-15',
+  })
+  @IsString()
+  @IsNotEmpty()
+  @IsDateString()
+  'professional.joinDate': string;
+
+  @ApiProperty({
+    enum: EmploymentType,
+    enumName: 'EmploymentType',
+    example: EmploymentType.FullTime,
+    description: 'Type of employment',
+  })
+  @IsEnum(EmploymentType)
+  @IsNotEmpty()
+  'professional.employmentType': EmploymentType;
+
+  @ApiProperty({
+    description: 'Educational qualifications',
+    example: 'Ph.D. in Mathematics, Stanford University',
+  })
+  @IsString()
+  @IsNotEmpty()
+  'professional.qualification': string;
+
+  @ApiProperty({
+    description: 'Years of teaching experience',
+    example: '10 years of teaching at university level',
+  })
+  @IsString()
+  @IsNotEmpty()
+  'professional.experience': string;
+
+  @ApiProperty({
+    description: 'Area of specialization',
+    example: 'Applied Mathematics and Statistics',
+  })
+  @IsString()
+  @IsNotEmpty()
+  'professional.specialization': string;
 
   @ApiProperty({ type: TeacherAddressDto })
+  @IsNotEmpty()
   @ValidateNested()
   @Type(() => TeacherAddressDto)
   address: TeacherAddressDto;
