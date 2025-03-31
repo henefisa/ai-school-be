@@ -1,4 +1,4 @@
-import { Gender } from 'src/shared/constants';
+import { Gender, Title, EmploymentType } from 'src/shared/constants';
 
 /**
  * Groups form data fields by their prefixes
@@ -113,4 +113,82 @@ export function groupStudentFormData<T extends Record<string, any>>(
 
   // Cast to the expected type, after doing necessary conversions
   return grouped as unknown as GroupedStudentFormData;
+}
+
+/**
+ * Teacher form data structure after grouping
+ */
+export interface GroupedTeacherFormData {
+  personal: {
+    title: Title;
+    employeeId: string;
+    firstName: string;
+    lastName: string;
+    dob: string;
+    gender: Gender;
+    photo?: Express.Multer.File;
+    username: string;
+    password: string;
+  };
+  contact: {
+    addressLine1: string;
+    addressLine2?: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    country: string;
+    email: string;
+    phoneNumber: string;
+    emergencyContact: string;
+    addressType?: string;
+  };
+  professional: {
+    departmentId: string;
+    position: string;
+    joinDate: string;
+    employmentType: EmploymentType;
+    qualification: string;
+    experience: string;
+    specialization: string;
+  };
+}
+
+/**
+ * A type-safe extension of the groupFormDataByPrefix function
+ * for teacher form data specifically.
+ *
+ * @example
+ * // Using with TeacherDTO from form data
+ * const teacherDto = new CreateTeacherDto(); // From request.body
+ * const groupedData = groupTeacherFormData(teacherDto);
+ *
+ * // Now you can access fields in a structured way
+ * const firstName = groupedData.personal.firstName;
+ * const email = groupedData.contact.email;
+ */
+export function groupTeacherFormData<T extends Record<string, any>>(
+  formData: T,
+): GroupedTeacherFormData {
+  const grouped = groupFormDataByPrefix(formData);
+
+  // Handle fields that need specific conversion
+  if (grouped.personal) {
+    if (grouped.personal.gender) {
+      // Ensure gender is converted to the proper enum value
+      grouped.personal.gender = grouped.personal.gender as Gender;
+    }
+    if (grouped.personal.title) {
+      // Ensure title is converted to the proper enum value
+      grouped.personal.title = grouped.personal.title as Title;
+    }
+  }
+
+  if (grouped.professional && grouped.professional.employmentType) {
+    // Ensure employmentType is converted to the proper enum value
+    grouped.professional.employmentType = grouped.professional
+      .employmentType as EmploymentType;
+  }
+
+  // Cast to the expected type, after doing necessary conversions
+  return grouped as unknown as GroupedTeacherFormData;
 }

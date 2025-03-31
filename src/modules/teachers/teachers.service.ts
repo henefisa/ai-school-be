@@ -12,6 +12,7 @@ import { EntityName } from 'src/shared/error-messages';
 import { DepartmentsService } from '../departments/departments.service';
 import { AddressesService } from '../addresses/addresses.service';
 import { CreateAddressDto } from '../addresses/dto/create-address.dto';
+import { groupTeacherFormData } from 'src/shared/utils/form-data.utils';
 
 @Injectable()
 export class TeachersService extends BaseService<Teacher> {
@@ -27,26 +28,29 @@ export class TeachersService extends BaseService<Teacher> {
 
   async create(dto: CreateTeacherDto) {
     return this.teacherRepository.manager.transaction(async (entityManager) => {
+      // Group form data by prefix
+      const groupedData = groupTeacherFormData(dto);
+
       // Extract teacher data
       const teacherData: Partial<Teacher> = {
         // Personal information
-        firstName: dto['personal.firstName'],
-        lastName: dto['personal.lastName'],
-        dob: new Date(dto['personal.dob']),
-        gender: dto['personal.gender'],
+        firstName: groupedData.personal.firstName,
+        lastName: groupedData.personal.lastName,
+        dob: new Date(groupedData.personal.dob),
+        gender: groupedData.personal.gender,
 
         // Contact information
-        email: dto['contact.email'],
-        contactNumber: dto['contact.phoneNumber'],
+        email: groupedData.contact.email,
+        contactNumber: groupedData.contact.phoneNumber,
 
         // Professional information
-        departmentId: dto['professional.departmentId'],
-        hireDate: new Date(dto['professional.joinDate']),
+        departmentId: groupedData.professional.departmentId,
+        hireDate: new Date(groupedData.professional.joinDate),
       };
 
       // Handle photo data
-      if (dto['personal.photo']) {
-        const photoFile = dto['personal.photo'] as unknown as {
+      if (groupedData.personal.photo) {
+        const photoFile = groupedData.personal.photo as unknown as {
           filename?: string;
         };
 
@@ -70,10 +74,10 @@ export class TeachersService extends BaseService<Teacher> {
       // Create user account for the teacher
       await this.usersService.create(
         {
-          username: dto['personal.username'],
-          email: dto['contact.email'],
+          username: groupedData.personal.username,
+          email: groupedData.contact.email,
           teacherId: createdTeacher.id,
-          password: dto['personal.password'],
+          password: groupedData.personal.password,
           role: Role.Teacher,
         },
         entityManager,
@@ -81,10 +85,10 @@ export class TeachersService extends BaseService<Teacher> {
 
       // Create address using AddressesService
       const addressDto: CreateAddressDto = {
-        addressLine1: dto['contact.addressLine1'] || '',
-        addressLine2: dto['contact.addressLine2'],
-        city: dto['contact.city'],
-        country: dto['contact.country'],
+        addressLine1: groupedData.contact.addressLine1 || '',
+        addressLine2: groupedData.contact.addressLine2,
+        city: groupedData.contact.city,
+        country: groupedData.contact.country,
       };
 
       const savedAddress = await this.addressesService.create(
@@ -96,7 +100,7 @@ export class TeachersService extends BaseService<Teacher> {
       await this.addressesService.associateWithTeacher(
         savedAddress.id,
         createdTeacher.id,
-        dto['contact.addressType'] || 'Primary',
+        groupedData.contact.addressType || 'Primary',
         entityManager,
       );
 
@@ -106,127 +110,54 @@ export class TeachersService extends BaseService<Teacher> {
 
   async update(id: string, dto: UpdateTeacherDto) {
     return this.teacherRepository.manager.transaction(async (entityManager) => {
+      // Group form data by prefix
+      const groupedData = groupTeacherFormData(dto);
+
       // Verify department exists if departmentId is provided
-      if (dto['professional.departmentId']) {
+      if (groupedData.professional?.departmentId) {
         await this.departmentsService.verifyDepartmentExists(
-          dto['professional.departmentId'],
+          groupedData.professional.departmentId,
         );
       }
 
       const teacher = await this.getOneOrThrow({
         where: { id },
-        relations: {
-          teacherAddresses: {
-            address: true,
-          },
-        },
       });
 
       // Extract teacher data to update
       const teacherData: Partial<Teacher> = {};
 
       // Personal information
-      if (dto['personal.firstName'])
-        teacherData.firstName = dto['personal.firstName'];
-      if (dto['personal.lastName'])
-        teacherData.lastName = dto['personal.lastName'];
-      if (dto['personal.dob']) teacherData.dob = new Date(dto['personal.dob']);
-      if (dto['personal.gender']) teacherData.gender = dto['personal.gender'];
+      if (groupedData.personal) {
+        if (groupedData.personal.firstName)
+          teacherData.firstName = groupedData.personal.firstName;
+        if (groupedData.personal.lastName)
+          teacherData.lastName = groupedData.personal.lastName;
+        if (groupedData.personal.dob)
+          teacherData.dob = new Date(groupedData.personal.dob);
+        if (groupedData.personal.gender)
+          teacherData.gender = groupedData.personal.gender;
+      }
 
       // Contact information
-      if (dto['contact.email']) teacherData.email = dto['contact.email'];
-      if (dto['contact.phoneNumber'])
-        teacherData.contactNumber = dto['contact.phoneNumber'];
+      if (groupedData.contact) {
+        if (groupedData.contact.email)
+          teacherData.email = groupedData.contact.email;
+        if (groupedData.contact.phoneNumber)
+          teacherData.contactNumber = groupedData.contact.phoneNumber;
+      }
 
       // Professional information
-      if (dto['professional.departmentId'])
-        teacherData.departmentId = dto['professional.departmentId'];
-      if (dto['professional.joinDate'])
-        teacherData.hireDate = new Date(dto['professional.joinDate']);
+      if (groupedData.professional) {
+        if (groupedData.professional.departmentId)
+          teacherData.departmentId = groupedData.professional.departmentId;
+        if (groupedData.professional.joinDate)
+          teacherData.hireDate = new Date(groupedData.professional.joinDate);
+      }
 
       // Apply updates to teacher
       Object.assign(teacher, teacherData);
       const updatedTeacher = await entityManager.save(Teacher, teacher);
-
-      // Handle address update
-      const teacherAddresses =
-        await this.addressesService.getAddressesForTeacher(id);
-      const existingAddress =
-        teacherAddresses.length > 0 ? teacherAddresses[0] : null;
-
-      // Check if any address field is provided
-      const hasAddressUpdate =
-        dto['contact.addressLine1'] !== undefined ||
-        dto['contact.addressLine2'] !== undefined ||
-        dto['contact.city'] !== undefined ||
-        dto['contact.country'] !== undefined;
-
-      if (hasAddressUpdate) {
-        if (existingAddress) {
-          // Update existing address
-          await this.addressesService.update(existingAddress.id, {
-            addressLine1:
-              dto['contact.addressLine1'] || existingAddress.addressLine1,
-            addressLine2: dto['contact.addressLine2'],
-            city: dto['contact.city'],
-            country: dto['contact.country'],
-          });
-        } else if (dto['contact.addressLine1']) {
-          // Create new address - addressLine1 is required
-          const addressDto: CreateAddressDto = {
-            addressLine1: dto['contact.addressLine1'],
-            addressLine2: dto['contact.addressLine2'],
-            city: dto['contact.city'],
-            country: dto['contact.country'],
-          };
-
-          const savedAddress = await this.addressesService.create(
-            addressDto,
-            entityManager,
-          );
-
-          // Associate address with teacher
-          await this.addressesService.associateWithTeacher(
-            savedAddress.id,
-            teacher.id,
-            dto['contact.addressType'] || 'Primary',
-            entityManager,
-          );
-        }
-      } else if (dto.address) {
-        // Handle legacy address object if provided
-        if (existingAddress) {
-          // Update existing address
-          await this.addressesService.update(existingAddress.id, {
-            addressLine1:
-              dto.address.addressLine1 || existingAddress.addressLine1,
-            addressLine2: dto.address.addressLine2,
-            city: dto.address.city,
-            country: dto.address.country,
-          });
-        } else if (dto.address.addressLine1) {
-          // Create new address
-          const addressDto: CreateAddressDto = {
-            addressLine1: dto.address.addressLine1,
-            addressLine2: dto.address.addressLine2,
-            city: dto.address.city,
-            country: dto.address.country,
-          };
-
-          const savedAddress = await this.addressesService.create(
-            addressDto,
-            entityManager,
-          );
-
-          // Associate address with teacher
-          await this.addressesService.associateWithTeacher(
-            savedAddress.id,
-            teacher.id,
-            'Primary',
-            entityManager,
-          );
-        }
-      }
 
       return updatedTeacher;
     });

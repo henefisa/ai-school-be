@@ -1,4 +1,3 @@
-import { Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 import {
   IsDateString,
@@ -8,10 +7,8 @@ import {
   IsOptional,
   IsString,
   IsUUID,
-  ValidateNested,
 } from 'class-validator';
 import { Gender, Title, EmploymentType } from 'src/shared/constants';
-import { TeacherAddressDto } from './teacher-address.dto';
 
 export class CreateTeacherDto {
   // Personal Info
@@ -235,10 +232,4 @@ export class CreateTeacherDto {
   @IsString()
   @IsNotEmpty()
   'professional.specialization': string;
-
-  @ApiProperty({ type: TeacherAddressDto })
-  @IsNotEmpty()
-  @ValidateNested()
-  @Type(() => TeacherAddressDto)
-  address: TeacherAddressDto;
 }
