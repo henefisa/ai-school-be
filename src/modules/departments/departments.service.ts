@@ -45,4 +45,28 @@ export class DepartmentsService extends BaseService<Department> {
       count,
     };
   }
+
+  /**
+   * Verify that a department exists by ID
+   * @param id Department ID to verify
+   * @returns The department if it exists
+   * @throws NotFoundException if the department doesn't exist
+   */
+  async verifyDepartmentExists(id: string): Promise<Department> {
+    return this.getOneOrThrow({
+      where: { id },
+    });
+  }
+
+  /**
+   * Get a department by ID
+   * @param id Department ID
+   * @returns The department if it exists
+   * @throws NotFoundException if the department doesn't exist
+   */
+  async getDepartmentById(id: string): Promise<Department> {
+    return this.getOneOrThrow({
+      where: { id },
+    });
+  }
 }

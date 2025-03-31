@@ -387,4 +387,17 @@ export class StudentsService extends BaseService<Student> {
       throw error;
     }
   }
+
+  /**
+   * Get all students associated with a parent ID
+   * @param parentId The parent ID to look up students for
+   * @returns Array of students for the specified parent
+   */
+  async getStudentsByParentId(parentId: string): Promise<Student[]> {
+    return this.studentRepository
+      .createQueryBuilder('student')
+      .leftJoinAndSelect('student.user', 'user')
+      .where('student.parent_id = :parentId', { parentId })
+      .getMany();
+  }
 }

@@ -28,6 +28,7 @@ import { Semester } from './typeorm/entities/semester.entity';
 import { Room } from './typeorm/entities/room.entity';
 import { Attendance } from './typeorm/entities/attendance.entity';
 import { Grade } from './typeorm/entities/grade.entity';
+import { TeacherAddress } from './typeorm/entities/teacher-address.entity';
 import { StudentsModule } from './modules/students/students.module';
 import { TeachersModule } from './modules/teachers/teachers.module';
 import { EnrollmentsModule } from './modules/enrollments/enrollments.module';
@@ -37,6 +38,7 @@ import { ClassesModule } from './modules/classes/classes.module';
 import { SemestersModule } from './modules/semesters/semesters.module';
 import { RoomsModule } from './modules/rooms/rooms.module';
 import { ParentsModule } from './modules/parents/parents.module';
+import { AddressesModule } from './modules/addresses/addresses.module';
 
 @Module({
   imports: [
@@ -63,6 +65,7 @@ import { ParentsModule } from './modules/parents/parents.module';
           Course,
           StudentAddress,
           ParentAddress,
+          TeacherAddress,
           Address,
           Parent,
           ClassRoom,
@@ -87,6 +90,7 @@ import { ParentsModule } from './modules/parents/parents.module';
     RoomsModule,
     SemestersModule,
     ParentsModule,
+    AddressesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

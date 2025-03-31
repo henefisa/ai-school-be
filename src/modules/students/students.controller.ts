@@ -88,7 +88,7 @@ export class StudentsController {
   @ApiOperation({
     summary: 'Update a student',
     description:
-      'Updates student personal information such as name, date of birth, contact details, etc. Parent information cannot be changed through this endpoint. Username and email updates will also update the associated user account.',
+      'Updates student personal information such as name, date of birth, contact details, etc. Parent information cannot be changed through this endpoint. Email updates will also update the associated user account.',
   })
   @Roles(Role.Admin)
   async updateStudent(@Param('id') id: string, @Body() dto: UpdateStudentDto) {

@@ -35,7 +35,7 @@ export class TeachersController {
 
   @Get(':id')
   async getTeacherById(@Param('id') id: string) {
-    return this.teacherService.getOneOrThrow({ where: { id: id } });
+    return this.teacherService.getTeacherById(id);
   }
 
   @Patch(':id')

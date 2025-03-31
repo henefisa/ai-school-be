@@ -11,6 +11,7 @@ import { Gender } from '../../shared/constants';
 import { User } from './user.entity';
 import { Department } from './department.entity';
 import { ClassAssignment } from './class-assignment.entity';
+import { TeacherAddress } from './teacher-address.entity';
 
 /**
  * Teacher entity representing faculty members in the educational system
@@ -60,4 +61,7 @@ export class Teacher extends BaseEntity {
     (classAssignment) => classAssignment.teacher,
   )
   assignments: ClassAssignment[];
+
+  @OneToMany(() => TeacherAddress, (teacherAddress) => teacherAddress.teacher)
+  teacherAddresses: TeacherAddress[];
 }

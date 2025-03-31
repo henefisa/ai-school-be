@@ -8,8 +8,10 @@ import {
   IsOptional,
   IsString,
   IsUUID,
+  ValidateNested,
 } from 'class-validator';
 import { Gender } from 'src/shared/constants';
+import { TeacherAddressDto } from './teacher-address.dto';
 
 export class UpdateTeacherDto {
   @IsString()
@@ -63,4 +65,9 @@ export class UpdateTeacherDto {
   @IsOptional()
   @IsUUID(4)
   departmentId?: string;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => TeacherAddressDto)
+  address?: TeacherAddressDto;
 }

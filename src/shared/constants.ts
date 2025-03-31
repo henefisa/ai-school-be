@@ -56,3 +56,18 @@ export enum RoomType {
   Auditorium = 'AUDITORIUM',
   Other = 'OTHER',
 }
+
+export enum Title {
+  Dr = 'DR',
+  Mr = 'MR',
+  Ms = 'MS',
+  Mrs = 'MRS',
+  Prof = 'PROF',
+}
+
+export enum EmploymentType {
+  FullTime = 'FULL_TIME',
+  PartTime = 'PART_TIME',
+  Contract = 'CONTRACT',
+  Temporary = 'TEMPORARY',
+}
