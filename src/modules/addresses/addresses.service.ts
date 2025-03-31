@@ -141,9 +141,12 @@ export class AddressesService extends BaseService<Address> {
     entityManager?: EntityManager,
   ): Promise<TeacherAddress> {
     // Ensure address exists
-    await this.getOneOrThrow({
-      where: { id: addressId },
-    });
+    await this.getOneOrThrow(
+      {
+        where: { id: addressId },
+      },
+      entityManager,
+    );
 
     const teacherAddressData = {
       teacherId,
@@ -156,11 +159,13 @@ export class AddressesService extends BaseService<Address> {
         TeacherAddress,
         teacherAddressData,
       );
+
       return await entityManager.save(TeacherAddress, teacherAddress);
     }
 
     const teacherAddress =
       this.teacherAddressRepository.create(teacherAddressData);
+
     return await this.teacherAddressRepository.save(teacherAddress);
   }
 
