@@ -301,7 +301,7 @@ export class StudentsService extends BaseService<Student> {
     const queryBuilder = this.studentRepository
       .createQueryBuilder('student')
       .leftJoinAndSelect('student.user', 'user')
-      .skip(((dto.page ?? 1) - 1) * (dto.pageSize ?? 10))
+      .skip(dto.skip)
       .take(dto.pageSize ?? 10);
 
     if (dto.q) {

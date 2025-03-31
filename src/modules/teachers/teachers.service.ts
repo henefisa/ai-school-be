@@ -6,7 +6,7 @@ import { UsersService } from '../users/users.service';
 import { CreateTeacherDto } from './dto/create-teacher.dto';
 import { Role } from 'src/shared/constants';
 import { UpdateTeacherDto } from './dto/update-teacher.dto';
-import { GetTeachersDto } from './dto/get-teacher.dto';
+import { GetTeachersDto } from './dto/get-teachers.dto';
 import { BaseService } from 'src/shared/base.service';
 import { EntityName } from 'src/shared/error-messages';
 import { DepartmentsService } from '../departments/departments.service';
@@ -168,10 +168,26 @@ export class TeachersService extends BaseService<Teacher> {
   }
 
   async getTeachers(dto: GetTeachersDto) {
-    const [results, count] = await this.teacherRepository.findAndCount({
-      skip: dto.skip,
-      take: dto.pageSize ?? 10,
-    });
+    const queryBuilder = this.teacherRepository
+      .createQueryBuilder('teacher')
+      .leftJoinAndSelect('teacher.user', 'user')
+      .skip(dto.skip)
+      .take(dto.pageSize ?? 10);
+
+    if (dto.q) {
+      queryBuilder.andWhere(
+        '(LOWER(teacher.firstName) LIKE LOWER(:query) OR LOWER(teacher.lastName) LIKE LOWER(:query))',
+        { query: `%${dto.q}%` },
+      );
+    }
+
+    if (dto.status !== undefined) {
+      queryBuilder.andWhere('user.isActive = :isActive', {
+        isActive: dto.status,
+      });
+    }
+
+    const [results, count] = await queryBuilder.getManyAndCount();
 
     return {
       results,
