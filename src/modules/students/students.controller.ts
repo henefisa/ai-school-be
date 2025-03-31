@@ -12,6 +12,8 @@ import {
   UseGuards,
   UseInterceptors,
   BadRequestException,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { StudentsService } from './students.service';
 import { CreateStudentDto } from './dto/create-student.dto';
@@ -73,18 +75,35 @@ export class StudentsController {
   @Get(':id')
   @ApiOperation({ summary: 'Get a student by id' })
   async getStudentById(@Param('id') id: string) {
-    return this.studentService.getOneOrThrow({ where: { id } });
+    return this.studentService.getOneOrThrow({
+      where: { id },
+      relations: {
+        user: true,
+        studentAddresses: true,
+      },
+    });
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Update a student' })
+  @ApiOperation({
+    summary: 'Update a student',
+    description:
+      'Updates student personal information such as name, date of birth, contact details, etc. Parent information cannot be changed through this endpoint. Username and email updates will also update the associated user account.',
+  })
+  @Roles(Role.Admin)
   async updateStudent(@Param('id') id: string, @Body() dto: UpdateStudentDto) {
     return this.studentService.update(id, dto);
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Delete a student' })
-  remove(@Param('id') id: string): Promise<void> {
+  @ApiOperation({
+    summary: 'Delete a student',
+    description:
+      'Removes a student record and all associated data including user account, enrollments, and addresses. Photos are physically deleted from storage. Parent records are preserved.',
+  })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Roles(Role.Admin)
+  async remove(@Param('id') id: string) {
     return this.studentService.delete(id);
   }
 

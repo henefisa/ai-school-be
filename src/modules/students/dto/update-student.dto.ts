@@ -6,7 +6,6 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
-  IsUUID,
 } from 'class-validator';
 import { Gender } from 'src/shared/constants';
 
@@ -20,16 +19,6 @@ export class UpdateStudentDto {
   @IsNotEmpty()
   @IsString()
   lastName?: string;
-
-  @IsString()
-  @IsNotEmpty()
-  @IsOptional()
-  username?: string;
-
-  @IsString()
-  @IsNotEmpty()
-  @IsOptional()
-  password?: string;
 
   @IsOptional()
   @IsDate()
@@ -49,10 +38,6 @@ export class UpdateStudentDto {
   @IsString()
   @IsEmail()
   email?: string;
-
-  @IsOptional()
-  @IsUUID(4)
-  parentId?: string;
 
   @IsOptional()
   @IsDate()

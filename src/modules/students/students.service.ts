@@ -20,6 +20,12 @@ import { groupStudentFormData } from 'src/shared/utils/form-data.utils';
 import { ParentsService } from '../parents/parents.service';
 import * as fs from 'fs';
 import * as path from 'path';
+import { User } from 'src/typeorm/entities/user.entity';
+import { Not, In } from 'typeorm';
+import { ParentAddress } from 'src/typeorm/entities/parent-address.entity';
+import { Attendance } from 'src/typeorm/entities/attendance.entity';
+import { Grade } from 'src/typeorm/entities/grade.entity';
+import { Enrollment } from 'src/typeorm/entities/enrollment.entity';
 
 @Injectable()
 export class StudentsService extends BaseService<Student> {
@@ -157,19 +163,138 @@ export class StudentsService extends BaseService<Student> {
   }
 
   async update(id: string, dto: UpdateStudentDto) {
+    // Find the student with their current data
     const student = await this.getOneOrThrow({
       where: {
         id,
       },
+      relations: {
+        user: true,
+      },
     });
 
-    Object.assign(student, dto);
+    const { email, ...studentUpdateData } = dto;
 
-    return this.studentRepository.save(student);
+    // If email is being updated, update the associated user account
+    if (email) {
+      if (!student.user) {
+        throw new NotFoundException(
+          'This student record has no associated user account',
+        );
+      }
+
+      const userUpdateData: Partial<User> = {};
+
+      if (email) {
+        userUpdateData.email = email;
+        // Also update the student's email directly
+        student.email = email;
+      }
+
+      // Update user account if needed
+      if (Object.keys(userUpdateData).length > 0) {
+        await this.usersService.update(student.user.id, userUpdateData);
+      }
+    }
+
+    // Apply the updates to the student object
+    Object.assign(student, studentUpdateData);
+
+    // Save the updated student
+    const updatedStudent = await this.studentRepository.save(student);
+
+    return this.getOneOrThrow({
+      where: { id: updatedStudent.id },
+      relations: {
+        user: true,
+        studentAddresses: {
+          address: true,
+        },
+      },
+    });
   }
 
   async delete(id: string) {
-    await this.studentRepository.softDelete({ id });
+    return this.studentRepository.manager.transaction(async (entityManager) => {
+      // 1. Find the student with user info to check for photo URL
+      const student = await this.getOneOrThrow({
+        where: { id },
+        relations: {
+          user: true,
+          studentAddresses: {
+            address: true,
+          },
+          enrollments: true,
+        },
+      });
+
+      // 2. Delete the student's photo if it exists
+      if (student.user?.photoUrl) {
+        const filename = student.user.photoUrl.split('/').pop();
+        if (filename) {
+          this.deleteUploadedFile(filename);
+        }
+      }
+
+      // 3. Delete related user record
+      if (student.user) {
+        await entityManager.softDelete(User, { id: student.user.id });
+      }
+
+      // 4. Delete all student-address relationships
+      if (student.studentAddresses?.length > 0) {
+        // Get all address IDs associated with this student
+        const addressIds = student.studentAddresses.map((sa) => sa.addressId);
+
+        // Delete student-address relationships
+        await entityManager.softDelete(StudentAddress, { studentId: id });
+
+        // Delete addresses that are only used by this student
+        // We need to check if each address is used by any other student or parent
+        for (const addressId of addressIds) {
+          const addressInUse = await entityManager.count(StudentAddress, {
+            where: {
+              addressId,
+              studentId: Not(id),
+            },
+          });
+
+          // Check if the address is used by any parent
+          const addressUsedByParent = await entityManager
+            .createQueryBuilder(ParentAddress, 'pa')
+            .where('pa.address_id = :addressId', { addressId })
+            .getCount();
+
+          // If address is not used by any other entity, delete it
+          if (addressInUse === 0 && addressUsedByParent === 0) {
+            await entityManager.softDelete(Address, { id: addressId });
+          }
+        }
+      }
+
+      // 5. Delete all enrollments associated with this student
+      if (student.enrollments?.length > 0) {
+        const enrollmentIds = student.enrollments.map((e) => e.id);
+
+        // Delete associated attendance records
+        await entityManager.softDelete(Attendance, {
+          enrollmentId: In(enrollmentIds),
+        });
+
+        // Delete associated grade records
+        await entityManager.softDelete(Grade, {
+          enrollmentId: In(enrollmentIds),
+        });
+
+        // Delete the enrollments
+        await entityManager.softDelete(Enrollment, {
+          studentId: id,
+        });
+      }
+
+      // 6. Finally, soft delete the student record
+      await entityManager.softDelete(Student, { id });
+    });
   }
 
   async getStudents(dto: GetStudentsDto) {
