@@ -33,6 +33,7 @@ import { Address } from '../../typeorm/entities/address.entity';
 import { Parent } from '../../typeorm/entities/parent.entity';
 import { StudentAddress } from '../../typeorm/entities/student-address.entity';
 import { ParentAddress } from '../../typeorm/entities/parent-address.entity';
+import { TeacherAddress } from '../../typeorm/entities/teacher-address.entity';
 import { ClassAssignment } from '../../typeorm/entities/class-assignment.entity';
 import { Enrollment } from '../../typeorm/entities/enrollment.entity';
 import { Attendance } from '../../typeorm/entities/attendance.entity';
@@ -73,6 +74,7 @@ const dbConfig = {
     Parent,
     StudentAddress,
     ParentAddress,
+    TeacherAddress,
     ClassAssignment,
     Enrollment,
     Attendance,
@@ -105,6 +107,7 @@ interface SeedData {
   parents: Parent[];
   studentAddresses: StudentAddress[];
   parentAddresses: ParentAddress[];
+  teacherAddresses: TeacherAddress[];
 }
 
 // Create empty seed data object
@@ -121,6 +124,7 @@ const seedData: SeedData = {
   parents: [],
   studentAddresses: [],
   parentAddresses: [],
+  teacherAddresses: [],
 };
 
 async function seedAdminUser(): Promise<User> {
@@ -276,7 +280,13 @@ async function seedSemesters(): Promise<Semester[]> {
 async function seedTeachers(): Promise<Teacher[]> {
   const teacherRepository = AppDataSource.getRepository(Teacher);
   const userRepository = AppDataSource.getRepository(User);
+  const teacherAddressRepository = AppDataSource.getRepository(TeacherAddress);
   console.log('Seeding teachers...');
+
+  // First, make sure we have addresses
+  if (seedData.addresses.length === 0) {
+    await seedAddresses();
+  }
 
   const teacherData = [
     {
@@ -347,6 +357,21 @@ async function seedTeachers(): Promise<Teacher[]> {
     teacher.user = user;
     await teacherRepository.save(teacher);
 
+    // Associate teacher with an address
+    const addressIndex = index % seedData.addresses.length;
+    const address = seedData.addresses[addressIndex];
+
+    const teacherAddress = teacherAddressRepository.create({
+      teacher: teacher,
+      address: address,
+      teacherId: teacher.id,
+      addressId: address.id,
+      addressType: 'Primary',
+    });
+
+    await teacherAddressRepository.save(teacherAddress);
+    seedData.teacherAddresses.push(teacherAddress);
+
     seedData.teachers.push(teacher);
     seedData.users.push(user);
   }
@@ -366,7 +391,9 @@ async function seedTeachers(): Promise<Teacher[]> {
     await teacherRepository.save(teacher);
   }
 
-  console.log(`Created ${teacherData.length} teachers with user accounts`);
+  console.log(
+    `Created ${teacherData.length} teachers with user accounts and addresses`,
+  );
   return seedData.teachers;
 }
 
@@ -769,39 +796,30 @@ async function seedEnrollments(): Promise<void> {
 // Main seeding function
 async function main() {
   try {
-    // Initialize connection
+    console.log('Starting database connection...');
     await AppDataSource.initialize();
-    console.log('Database connection established');
+    console.log('Database connected successfully.');
 
-    // Seed basic entities first
-    await seedAdminUser();
+    // Seed in appropriate order for dependencies
     await seedDepartments();
     await seedRooms();
     await seedSemesters();
-    await seedAddresses();
-    await seedParents();
-
-    // Seed entities with dependencies
+    await seedAddresses(); // Seed addresses before teachers and students
     await seedTeachers();
     await seedCourses();
     await seedClasses();
+    await seedParents();
     await seedStudents();
     await seedEnrollments();
+    await seedAdminUser();
 
-    console.log('Database seeding completed successfully!');
+    console.log('All seed data created successfully!');
   } catch (error) {
-    console.error('Error seeding database:');
-    if (error instanceof Error) {
-      console.error(error.stack);
-    } else {
-      console.error(error);
-    }
+    console.error('Error during database seeding:', error);
     process.exit(1);
   } finally {
-    // Close connection
-    if (AppDataSource.isInitialized) {
-      await AppDataSource.destroy();
-    }
+    await AppDataSource.destroy();
+    console.log('Database connection closed.');
   }
 }
 
