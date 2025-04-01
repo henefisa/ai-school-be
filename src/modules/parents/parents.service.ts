@@ -116,14 +116,14 @@ export class ParentsService extends BaseService<Parent> {
     // Apply search filter if query parameter exists
     if (dto.q) {
       queryBuilder.where(
-        '(parent.first_name ILIKE :query OR parent.last_name ILIKE :query OR parent.email ILIKE :query)',
+        '(parent.firstName ILIKE :query OR parent.lastName ILIKE :query OR parent.email ILIKE :query)',
         { query: `%${dto.q}%` },
       );
     }
 
     // Join with User to get status information
     if (dto.status !== undefined) {
-      queryBuilder.andWhere('user.is_active = :status', {
+      queryBuilder.andWhere('user.isActive = :status', {
         status: dto.status,
       });
     }
@@ -132,7 +132,7 @@ export class ParentsService extends BaseService<Parent> {
     queryBuilder
       .skip(dto.skip)
       .take(dto.pageSize || 10)
-      .orderBy('parent.created_at', 'DESC');
+      .orderBy('parent.createdAt', 'DESC');
 
     const [results, count] = await queryBuilder.getManyAndCount();
 
