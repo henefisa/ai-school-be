@@ -18,10 +18,12 @@ describe('AuthController (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+    app.useGlobalPipes(
+      new ValidationPipe({ whitelist: true, transform: true }),
+    );
     app.useGlobalFilters(new HttpExceptionFilter());
     userRepository = moduleFixture.get(getRepositoryToken(User));
-    
+
     await app.init();
   });
 
@@ -160,9 +162,7 @@ describe('AuthController (e2e)', () => {
     });
 
     it('should return 401 Unauthorized with missing token', async () => {
-      await request(app.getHttpServer())
-        .get('/auth/profile')
-        .expect(401);
+      await request(app.getHttpServer()).get('/auth/profile').expect(401);
     });
   });
-}); 
+});

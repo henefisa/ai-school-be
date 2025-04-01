@@ -6,16 +6,19 @@ import { TeacherAddress } from './teacher-address.entity';
 
 @Entity('addresses')
 export class Address extends BaseEntity {
-  @Column()
-  addressLine1: string;
+  @Column({ default: '' })
+  address: string;
 
-  @Column({ nullable: true })
-  addressLine2: string;
-
-  @Column({ nullable: true })
+  @Column({ default: '' })
   city: string;
 
-  @Column({ nullable: true })
+  @Column({ default: '' })
+  state: string;
+
+  @Column({ default: '' })
+  zipCode: string;
+
+  @Column({ default: '' })
   country: string;
 
   @OneToMany(() => StudentAddress, (studentAddress) => studentAddress.address)

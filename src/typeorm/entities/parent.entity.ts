@@ -3,6 +3,7 @@ import { BaseEntity } from './base.entity';
 import { RelationshipToStudent } from 'src/shared/constants';
 import { ParentAddress } from './parent-address.entity';
 import { Student } from './student.entity';
+import { EmergencyContact } from './emergency-contact.entity';
 
 @Entity('parents')
 export class Parent extends BaseEntity {
@@ -27,9 +28,18 @@ export class Parent extends BaseEntity {
   @Column({ nullable: true })
   occupation: string;
 
+  @Column({ nullable: true, type: 'text' })
+  notes: string;
+
   @OneToMany(() => Student, (student) => student.parent)
   students: Student[];
 
   @OneToMany(() => ParentAddress, (parentAddress) => parentAddress.parent)
   parentAddresses: ParentAddress[];
+
+  @OneToMany(
+    () => EmergencyContact,
+    (emergencyContact) => emergencyContact.parent,
+  )
+  emergencyContacts: EmergencyContact[];
 }

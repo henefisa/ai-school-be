@@ -75,9 +75,12 @@ export class AddressesService extends BaseService<Address> {
     entityManager?: EntityManager,
   ): Promise<ParentAddress> {
     // Ensure address exists
-    await this.getOneOrThrow({
-      where: { id: addressId },
-    });
+    await this.getOneOrThrow(
+      {
+        where: { id: addressId },
+      },
+      entityManager,
+    );
 
     const parentAddressData = {
       parentId,

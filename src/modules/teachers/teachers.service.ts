@@ -93,9 +93,10 @@ export class TeachersService extends BaseService<Teacher> {
 
       // Create address using AddressesService
       const addressDto: CreateAddressDto = {
-        addressLine1: groupedData.contact.addressLine1 || '',
-        addressLine2: groupedData.contact.addressLine2,
+        address: groupedData.contact.address,
         city: groupedData.contact.city,
+        state: groupedData.contact.state,
+        zipCode: groupedData.contact.zipCode,
         country: groupedData.contact.country,
       };
 

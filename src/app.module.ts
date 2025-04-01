@@ -29,6 +29,7 @@ import { Room } from './typeorm/entities/room.entity';
 import { Attendance } from './typeorm/entities/attendance.entity';
 import { Grade } from './typeorm/entities/grade.entity';
 import { TeacherAddress } from './typeorm/entities/teacher-address.entity';
+import { EmergencyContact } from './typeorm/entities/emergency-contact.entity';
 import { StudentsModule } from './modules/students/students.module';
 import { TeachersModule } from './modules/teachers/teachers.module';
 import { EnrollmentsModule } from './modules/enrollments/enrollments.module';
@@ -74,6 +75,7 @@ import { AddressesModule } from './modules/addresses/addresses.module';
           Room,
           Attendance,
           Grade,
+          EmergencyContact,
         ],
         autoLoadEntities: true,
         synchronize: configService.get('NODE_ENV') !== 'production',

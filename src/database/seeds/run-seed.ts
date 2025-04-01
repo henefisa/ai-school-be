@@ -38,6 +38,8 @@ import { ClassAssignment } from '../../typeorm/entities/class-assignment.entity'
 import { Enrollment } from '../../typeorm/entities/enrollment.entity';
 import { Attendance } from '../../typeorm/entities/attendance.entity';
 import { Grade } from '../../typeorm/entities/grade.entity';
+import { EmergencyContact } from '../../typeorm/entities/emergency-contact.entity';
+import * as argon2 from 'argon2';
 
 // Load environment variables with more debugging
 const envPath = path.resolve(process.cwd(), '.env');
@@ -79,6 +81,7 @@ const dbConfig = {
     Enrollment,
     Attendance,
     Grade,
+    EmergencyContact,
   ],
   synchronize: process.env.NODE_ENV !== 'production',
   logging: true,
@@ -108,6 +111,7 @@ interface SeedData {
   studentAddresses: StudentAddress[];
   parentAddresses: ParentAddress[];
   teacherAddresses: TeacherAddress[];
+  emergencyContacts: EmergencyContact[];
 }
 
 // Create empty seed data object
@@ -125,6 +129,7 @@ const seedData: SeedData = {
   studentAddresses: [],
   parentAddresses: [],
   teacherAddresses: [],
+  emergencyContacts: [],
 };
 
 async function seedAdminUser(): Promise<User> {
@@ -283,112 +288,99 @@ async function seedTeachers(): Promise<Teacher[]> {
   const teacherAddressRepository = AppDataSource.getRepository(TeacherAddress);
   console.log('Seeding teachers...');
 
-  // First, make sure we have addresses
-  if (seedData.addresses.length === 0) {
-    await seedAddresses();
-  }
-
   const teacherData = [
     {
       firstName: 'John',
       lastName: 'Smith',
-      email: 'john.smith@school.edu',
+      dob: new Date('1980-06-10'),
       gender: Gender.Male,
       contactNumber: '123-456-7890',
-      hireDate: new Date(2020, 0, 15),
+      email: 'john.smith@school.edu',
+      hireDate: new Date('2020-01-15'),
       salary: 65000,
-      dob: new Date(1980, 5, 10),
+      departmentId: seedData.departments[0].id,
     },
     {
       firstName: 'Sarah',
       lastName: 'Johnson',
-      email: 'sarah.johnson@school.edu',
+      dob: new Date('1975-03-15'),
       gender: Gender.Female,
       contactNumber: '123-456-7891',
-      hireDate: new Date(2018, 8, 1),
+      email: 'sarah.johnson@school.edu',
+      hireDate: new Date('2018-09-01'),
       salary: 72000,
-      dob: new Date(1975, 2, 15),
+      departmentId: seedData.departments[1].id,
     },
     {
       firstName: 'Robert',
       lastName: 'Williams',
-      email: 'robert.williams@school.edu',
+      dob: new Date('1982-12-05'),
       gender: Gender.Male,
       contactNumber: '123-456-7892',
-      hireDate: new Date(2019, 5, 10),
+      email: 'robert.williams@school.edu',
+      hireDate: new Date('2019-06-10'),
       salary: 68000,
-      dob: new Date(1982, 11, 5),
+      departmentId: seedData.departments[2].id,
     },
     {
       firstName: 'Emily',
       lastName: 'Davis',
-      email: 'emily.davis@school.edu',
+      dob: new Date('1985-04-25'),
       gender: Gender.Female,
       contactNumber: '123-456-7893',
-      hireDate: new Date(2021, 7, 20),
+      email: 'emily.davis@school.edu',
+      hireDate: new Date('2021-08-20'),
       salary: 61000,
-      dob: new Date(1985, 3, 25),
+      departmentId: seedData.departments[3].id,
     },
   ];
 
-  for (const [index, data] of teacherData.entries()) {
-    const department =
-      seedData.departments[index % seedData.departments.length];
-
+  for (const data of teacherData) {
     // Create teacher
-    const teacher = teacherRepository.create({
-      ...data,
-      departmentId: department.id,
-    });
+    const teacher = teacherRepository.create(data);
     await teacherRepository.save(teacher);
 
-    // Create associated user account
+    // Create a user account for the teacher
     const user = userRepository.create({
-      email: data.email,
-      username: `${data.firstName.toLowerCase()}.${data.lastName.toLowerCase()}`,
-      password: 'password123',
+      email: teacher.email,
+      username: teacher.email.split('@')[0],
+      password: await argon2.hash('password'),
       role: Role.Teacher,
       teacherId: teacher.id,
       isActive: true,
+      teacher: teacher,
     });
     await userRepository.save(user);
 
-    // Update the teacher with user reference
+    // Update the teacher object
     teacher.user = user;
-    await teacherRepository.save(teacher);
 
-    // Associate teacher with an address
-    const addressIndex = index % seedData.addresses.length;
+    // Also set the teacher's salary
+    await teacherRepository.update(teacher.id, { salary: data.salary });
+
+    // Initialize departments array and add the department
+    const department = seedData.departments.find(
+      (dept) => dept.id === data.departmentId,
+    );
+    if (department) {
+      teacher.departments = [department];
+    }
+
+    // Assign an address to each teacher
+    const addressIndex = seedData.teachers.length % seedData.addresses.length;
     const address = seedData.addresses[addressIndex];
 
     const teacherAddress = teacherAddressRepository.create({
-      teacher: teacher,
-      address: address,
       teacherId: teacher.id,
       addressId: address.id,
       addressType: 'Primary',
+      teacher: teacher,
+      address: address,
     });
 
     await teacherAddressRepository.save(teacherAddress);
-    seedData.teacherAddresses.push(teacherAddress);
 
     seedData.teachers.push(teacher);
-    seedData.users.push(user);
-  }
-
-  // Assign departments to teachers using many-to-many relationship
-  for (let i = 0; i < seedData.teachers.length; i++) {
-    const teacher = seedData.teachers[i];
-    // Assign primary department and one additional department
-    const primaryDeptIndex = i % seedData.departments.length;
-    const secondaryDeptIndex = (i + 1) % seedData.departments.length;
-
-    teacher.departments = [
-      seedData.departments[primaryDeptIndex],
-      seedData.departments[secondaryDeptIndex],
-    ];
-
-    await teacherRepository.save(teacher);
   }
 
   console.log(
@@ -553,33 +545,38 @@ async function seedAddresses(): Promise<Address[]> {
 
   const addressData = [
     {
-      addressLine1: '123 Main St',
-      addressLine2: 'Apt 4B',
+      address: '123 Main St, Apt 4B',
       city: 'New York',
+      state: 'NY',
+      zipCode: '10001',
       country: 'USA',
     },
     {
-      addressLine1: '456 Oak Ave',
-      addressLine2: undefined,
+      address: '456 Oak Ave',
       city: 'Chicago',
+      state: 'IL',
+      zipCode: '60601',
       country: 'USA',
     },
     {
-      addressLine1: '789 Pine Rd',
-      addressLine2: 'Suite 101',
+      address: '789 Pine Rd, Suite 101',
       city: 'Los Angeles',
+      state: 'CA',
+      zipCode: '90001',
       country: 'USA',
     },
     {
-      addressLine1: '101 Maple Dr',
-      addressLine2: undefined,
+      address: '101 Maple Dr',
       city: 'Houston',
+      state: 'TX',
+      zipCode: '77001',
       country: 'USA',
     },
     {
-      addressLine1: '202 Cedar Ln',
-      addressLine2: 'Unit 7',
+      address: '202 Cedar Ln, Unit 7',
       city: 'Miami',
+      state: 'FL',
+      zipCode: '33101',
       country: 'USA',
     },
   ];
@@ -597,6 +594,8 @@ async function seedAddresses(): Promise<Address[]> {
 async function seedParents(): Promise<Parent[]> {
   const parentRepository = AppDataSource.getRepository(Parent);
   const parentAddressRepository = AppDataSource.getRepository(ParentAddress);
+  const emergencyContactRepository =
+    AppDataSource.getRepository(EmergencyContact);
   console.log('Seeding parents...');
 
   const parentData = [
@@ -608,6 +607,7 @@ async function seedParents(): Promise<Parent[]> {
       contactNumber2: '555-765-4321',
       email: 'michael.brown@example.com',
       occupation: 'Engineer',
+      notes: 'Prefers to be contacted by email. Works evenings.',
     },
     {
       firstName: 'Jennifer',
@@ -617,6 +617,7 @@ async function seedParents(): Promise<Parent[]> {
       contactNumber2: undefined,
       email: 'jennifer.wilson@example.com',
       occupation: 'Doctor',
+      notes: 'Available for contact after 5 PM.',
     },
     {
       firstName: 'David',
@@ -626,28 +627,91 @@ async function seedParents(): Promise<Parent[]> {
       contactNumber2: undefined,
       email: 'david.taylor@example.com',
       occupation: 'Accountant',
+      notes: 'Prefers phone calls over emails.',
     },
   ];
 
-  for (const data of parentData) {
+  // Emergency contact data for each parent
+  const emergencyContactsData = [
+    [
+      {
+        name: 'Sarah Brown',
+        relationship: 'Wife',
+        phoneNumber: '555-987-6543',
+        email: 'sarah.brown@example.com',
+      },
+      {
+        name: 'James Brown',
+        relationship: 'Brother',
+        phoneNumber: '555-123-9876',
+        email: 'james.brown@example.com',
+      },
+    ],
+    [
+      {
+        name: 'Robert Wilson',
+        relationship: 'Husband',
+        phoneNumber: '555-876-5432',
+        email: 'robert.wilson@example.com',
+      },
+    ],
+    [
+      {
+        name: 'Emma Taylor',
+        relationship: 'Wife',
+        phoneNumber: '555-765-4321',
+        email: 'emma.taylor@example.com',
+      },
+      {
+        name: 'Mary Taylor',
+        relationship: 'Mother',
+        phoneNumber: '555-234-5678',
+        email: undefined,
+      },
+    ],
+  ];
+
+  for (let i = 0; i < parentData.length; i++) {
+    const data = parentData[i];
+
+    // Create parent
     const parent = parentRepository.create(data);
     await parentRepository.save(parent);
     seedData.parents.push(parent);
 
     // Assign an address to each parent
-    const address = seedData.addresses[seedData.parents.indexOf(parent)];
+    const address = seedData.addresses[i % seedData.addresses.length];
 
     const parentAddress = parentAddressRepository.create({
       parent: parent,
       address: address,
-      addressType: 'Home',
+      parentId: parent.id,
+      addressId: address.id,
+      addressType: 'Primary',
     });
 
     await parentAddressRepository.save(parentAddress);
     seedData.parentAddresses.push(parentAddress);
+
+    // Create emergency contacts for this parent
+    const contactsData = emergencyContactsData[i];
+    for (const contactData of contactsData) {
+      const emergencyContact = emergencyContactRepository.create({
+        name: contactData.name,
+        relationship: contactData.relationship,
+        phoneNumber: contactData.phoneNumber,
+        email: contactData.email,
+        parentId: parent.id,
+      });
+
+      await emergencyContactRepository.save(emergencyContact);
+      seedData.emergencyContacts.push(emergencyContact);
+    }
   }
 
-  console.log(`Created ${parentData.length} parents with addresses`);
+  console.log(
+    `Created ${parentData.length} parents with addresses and emergency contacts`,
+  );
   return seedData.parents;
 }
 
@@ -657,6 +721,9 @@ async function seedStudents(): Promise<Student[]> {
   const studentAddressRepository = AppDataSource.getRepository(StudentAddress);
   console.log('Seeding students...');
 
+  // Clear the students array to prevent adding to previous attempts
+  seedData.students = [];
+
   const studentData = [
     {
       firstName: 'Alex',
@@ -664,8 +731,8 @@ async function seedStudents(): Promise<Student[]> {
       email: 'alex.brown@student.edu',
       gender: Gender.Male,
       contactNumber: '555-111-2222',
-      dob: new Date(2000, 5, 15),
-      enrollmentDate: new Date(2022, 8, 1),
+      dob: '2000-06-15', // Changed to string for easier date parsing
+      enrollmentDate: '2022-09-01', // Changed to string for easier date parsing
       parentId: seedData.parents[0].id,
     },
     {
@@ -674,8 +741,8 @@ async function seedStudents(): Promise<Student[]> {
       email: 'jessica.wilson@student.edu',
       gender: Gender.Female,
       contactNumber: '555-222-3333',
-      dob: new Date(2001, 2, 22),
-      enrollmentDate: new Date(2022, 8, 1),
+      dob: '2001-03-22',
+      enrollmentDate: '2022-09-01',
       parentId: seedData.parents[1].id,
     },
     {
@@ -684,8 +751,8 @@ async function seedStudents(): Promise<Student[]> {
       email: 'ethan.taylor@student.edu',
       gender: Gender.Male,
       contactNumber: '555-333-4444',
-      dob: new Date(2000, 11, 7),
-      enrollmentDate: new Date(2022, 8, 1),
+      dob: '2000-12-07',
+      enrollmentDate: '2022-09-01',
       parentId: seedData.parents[2].id,
     },
     {
@@ -694,58 +761,90 @@ async function seedStudents(): Promise<Student[]> {
       email: 'olivia.brown@student.edu',
       gender: Gender.Female,
       contactNumber: '555-444-5555',
-      dob: new Date(2001, 7, 30),
-      enrollmentDate: new Date(2023, 8, 1),
+      dob: '2001-08-30',
+      enrollmentDate: '2023-09-01',
       parentId: seedData.parents[0].id,
     },
   ];
 
-  for (const data of studentData) {
-    // Get parent
-    const parent = seedData.parents.find((p) => p.id === data.parentId);
+  for (const [index, data] of studentData.entries()) {
+    try {
+      // Get parent
+      const parent = seedData.parents.find((p) => p.id === data.parentId);
 
-    // Create student
-    const student = studentRepository.create({
-      ...data,
-      parent: parent,
-    });
-    await studentRepository.save(student);
+      if (!parent) {
+        console.log(
+          `Parent with ID ${data.parentId} not found for student ${data.firstName} ${data.lastName}`,
+        );
+        continue;
+      }
 
-    // Create associated user account
-    const user = userRepository.create({
-      email: data.email,
-      username: `${data.firstName.toLowerCase()}.${data.lastName.toLowerCase()}`,
-      password: 'password123',
-      role: Role.Student,
-      studentId: student.id,
-      isActive: true,
-    });
-    await userRepository.save(user);
+      console.log(
+        `Creating student: ${data.firstName} ${data.lastName} with parent ID: ${parent.id}`,
+      );
 
-    // Update the student with user reference
-    student.user = user;
-    await studentRepository.save(student);
+      // Create student with parsed dates
+      const student = studentRepository.create({
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email,
+        gender: data.gender,
+        contactNumber: data.contactNumber,
+        dob: new Date(data.dob),
+        enrollmentDate: new Date(data.enrollmentDate),
+        parentId: parent.id,
+        parent: parent,
+      });
 
-    // Assign an address to each student
-    const address =
-      seedData.addresses[studentData.indexOf(data) % seedData.addresses.length];
+      await studentRepository.save(student);
+      console.log(`Student saved with ID: ${student.id}`);
 
-    // Using student and address objects directly instead of IDs
-    const studentAddress = studentAddressRepository.create({
-      student: student,
-      address: address,
-      addressType: 'Home',
-    });
+      // Create associated user account
+      const user = userRepository.create({
+        email: data.email,
+        username: `${data.firstName.toLowerCase()}.${data.lastName.toLowerCase()}`,
+        password: await argon2.hash('password'),
+        role: Role.Student,
+        studentId: student.id,
+        isActive: true,
+      });
 
-    await studentAddressRepository.save(studentAddress);
+      await userRepository.save(user);
+      console.log(`User account created for student: ${user.id}`);
 
-    seedData.students.push(student);
-    seedData.users.push(user);
-    seedData.studentAddresses.push(studentAddress);
+      // Associate student with an address (can use parent's address or a new one)
+      if (seedData.addresses.length > 0) {
+        const addressIndex = index % seedData.addresses.length;
+        const address = seedData.addresses[addressIndex];
+
+        console.log(`Associating student with address ID: ${address.id}`);
+
+        const studentAddress = studentAddressRepository.create({
+          studentId: student.id,
+          addressId: address.id,
+          addressType: 'School',
+        });
+
+        await studentAddressRepository.save(studentAddress);
+        seedData.studentAddresses.push(studentAddress);
+        console.log(`Student address created: ${studentAddress.id}`);
+      } else {
+        console.log('No addresses available to associate with student');
+      }
+
+      // Add to seed data arrays
+      seedData.students.push(student);
+      seedData.users.push(user);
+    } catch (error) {
+      console.error(
+        `Error creating student ${data.firstName} ${data.lastName}:`,
+        error,
+      );
+    }
   }
 
   console.log(
-    `Created ${studentData.length} students with user accounts and addresses`,
+    `Created ${seedData.students.length} students with user accounts and addresses`,
   );
   return seedData.students;
 }
