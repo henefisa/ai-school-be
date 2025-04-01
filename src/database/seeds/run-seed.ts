@@ -521,50 +521,124 @@ async function seedCourses(): Promise<Course[]> {
   const courseData = [
     {
       name: 'Introduction to Computer Science',
+      code: 'CS101',
       description:
         'Fundamental concepts of computer programming and software development',
       credits: 3,
       required: true,
       departmentId: seedData.departments[0].id, // Computer Science
+      syllabus:
+        'Introduction to programming concepts, data structures, and algorithms',
+      level: 'Beginner',
+      startDate: new Date(2024, 0, 15), // January 15, 2024
+      endDate: new Date(2024, 4, 31), // May 31, 2024
+      status: 'ACTIVE',
+      maxStudents: 30,
+      location: 'Tech Building, Room 101',
+      classDays: 'Monday, Wednesday',
+      prerequisites: [],
     },
     {
       name: 'Data Structures and Algorithms',
+      code: 'CS201',
       description: 'Advanced data structures and algorithm design techniques',
       credits: 4,
       required: true,
       departmentId: seedData.departments[0].id, // Computer Science
+      syllabus:
+        'Arrays, linked lists, trees, graphs, sorting and searching algorithms',
+      level: 'Intermediate',
+      startDate: new Date(2024, 0, 15), // January 15, 2024
+      endDate: new Date(2024, 4, 31), // May 31, 2024
+      status: 'ACTIVE',
+      maxStudents: 25,
+      location: 'Tech Building, Room 102',
+      classDays: 'Tuesday, Thursday',
+      prerequisites: ['CS101'],
     },
     {
       name: 'Calculus I',
+      code: 'MATH101',
       description: 'Introduction to differential and integral calculus',
       credits: 4,
       required: true,
       departmentId: seedData.departments[1].id, // Mathematics
+      syllabus: 'Limits, derivatives, integrals, and applications',
+      level: 'Beginner',
+      startDate: new Date(2024, 0, 15), // January 15, 2024
+      endDate: new Date(2024, 4, 31), // May 31, 2024
+      status: 'ACTIVE',
+      maxStudents: 35,
+      location: 'Science Building, Room 201',
+      classDays: 'Monday, Wednesday, Friday',
+      prerequisites: [],
     },
     {
       name: 'Physics for Scientists and Engineers',
+      code: 'PHYS201',
       description: 'Mechanics, waves, thermodynamics, and related topics',
       credits: 4,
       required: true,
       departmentId: seedData.departments[2].id, // Physics
+      syllabus:
+        'Kinematics, dynamics, conservation laws, fluid mechanics, and thermodynamics',
+      level: 'Intermediate',
+      startDate: new Date(2024, 0, 15), // January 15, 2024
+      endDate: new Date(2024, 4, 31), // May 31, 2024
+      status: 'ACTIVE',
+      maxStudents: 30,
+      location: 'Science Building, Room 101',
+      classDays: 'Tuesday, Thursday',
+      prerequisites: ['MATH101'],
     },
     {
       name: 'English Composition',
+      code: 'ENGL101',
       description: 'Principles of effective writing and critical thinking',
       credits: 3,
       required: true,
       departmentId: seedData.departments[3].id, // English
+      syllabus: 'Writing process, rhetorical strategies, grammar, and style',
+      level: 'Beginner',
+      startDate: new Date(2024, 0, 15), // January 15, 2024
+      endDate: new Date(2024, 4, 31), // May 31, 2024
+      status: 'ACTIVE',
+      maxStudents: 25,
+      location: 'Liberal Arts Building, Room 201',
+      classDays: 'Monday, Wednesday',
+      prerequisites: [],
     },
     {
       name: 'World History',
+      code: 'HIST101',
       description: 'Survey of major historical events and developments',
       credits: 3,
       required: false,
       departmentId: seedData.departments[4].id, // History
+      syllabus: 'Ancient civilizations to modern times, global perspectives',
+      level: 'Beginner',
+      startDate: new Date(2024, 0, 15), // January 15, 2024
+      endDate: new Date(2024, 4, 31), // May 31, 2024
+      status: 'ACTIVE',
+      maxStudents: 40,
+      location: 'Liberal Arts Building, Room 301',
+      classDays: 'Tuesday, Thursday',
+      prerequisites: [],
     },
   ];
 
   for (const data of courseData) {
+    // Check if course already exists by code
+    const existingCourse = await courseRepository.findOne({
+      where: { code: data.code },
+    });
+
+    if (existingCourse) {
+      console.log(`Course with code ${data.code} already exists, skipping`);
+      seedData.courses.push(existingCourse);
+      continue;
+    }
+
     // Get department ID but don't include the full department object to avoid circular reference
     const department = seedData.departments.find(
       (d) => d.id === data.departmentId,
@@ -577,20 +651,20 @@ async function seedCourses(): Promise<Course[]> {
       continue;
     }
 
-    const course = courseRepository.create({
-      name: data.name,
-      description: data.description,
-      credits: data.credits,
-      required: data.required,
-      departmentId: data.departmentId,
-      // Don't include the full department object to avoid circular reference
-    });
-
-    await courseRepository.save(course);
-    seedData.courses.push(course);
+    try {
+      const course = courseRepository.create(data);
+      await courseRepository.save(course);
+      seedData.courses.push(course);
+      console.log(`Created course: ${course.name} (${course.code})`);
+    } catch (error: unknown) {
+      console.error(
+        `Error creating course ${data.name}:`,
+        error instanceof Error ? error.message : 'Unknown error',
+      );
+    }
   }
 
-  console.log(`Created ${courseData.length} courses`);
+  console.log(`Created ${seedData.courses.length} courses`);
   return seedData.courses;
 }
 
