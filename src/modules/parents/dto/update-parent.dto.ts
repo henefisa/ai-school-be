@@ -1,11 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
+  ArrayMinSize,
   IsArray,
   IsEmail,
   IsOptional,
   IsString,
-  MinLength,
   ValidateNested,
 } from 'class-validator';
 import { EmergencyContactDto } from './emergency-contact.dto';
@@ -155,7 +155,7 @@ export class UpdateParentDto {
   @ValidateNested({ each: true })
   @Type(() => EmergencyContactDto)
   @IsOptional()
-  @MinLength(1, {
+  @ArrayMinSize(1, {
     message:
       'At least one emergency contact is required when updating contacts',
   })

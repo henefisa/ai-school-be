@@ -255,7 +255,7 @@ export class TeachersService extends BaseService<Teacher> {
       }
 
       // 6. If this teacher is a department head, nullify the references
-      await entityManager.update(Department, { head: id }, { head: null });
+      await entityManager.update(Department, { headId: id }, { headId: null });
 
       // 8. Finally, soft delete the teacher record
       await entityManager.softDelete(Teacher, { id });

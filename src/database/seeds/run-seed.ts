@@ -173,20 +173,86 @@ async function seedDepartments(): Promise<Department[]> {
   console.log('Seeding departments...');
 
   const departmentData = [
-    { name: 'Computer Science' },
-    { name: 'Mathematics' },
-    { name: 'Physics' },
-    { name: 'English' },
-    { name: 'History' },
+    {
+      name: 'Computer Science',
+      code: 'CS',
+      description:
+        'The study of computers and computational systems including algorithms, data structures, and software development.',
+      location: 'Tech Building, 3rd Floor',
+      email: 'cs@school.edu',
+      phoneNumber: '555-123-4567',
+    },
+    {
+      name: 'Mathematics',
+      code: 'MATH',
+      description:
+        'The study of numbers, quantities, and shapes, including algebra, calculus, and statistical analysis.',
+      location: 'Science Building, 2nd Floor',
+      email: 'math@school.edu',
+      phoneNumber: '555-123-4568',
+    },
+    {
+      name: 'Physics',
+      code: 'PHYS',
+      description:
+        'The study of matter, energy, and the interactions between them, including mechanics, thermodynamics, and quantum physics.',
+      location: 'Science Building, 1st Floor',
+      email: 'physics@school.edu',
+      phoneNumber: '555-123-4569',
+    },
+    {
+      name: 'English',
+      code: 'ENGL',
+      description:
+        'The study of language, literature, and writing, including composition, rhetoric, and literary analysis.',
+      location: 'Liberal Arts Building, 2nd Floor',
+      email: 'english@school.edu',
+      phoneNumber: '555-123-4570',
+    },
+    {
+      name: 'History',
+      code: 'HIST',
+      description:
+        'The study of past events and their significance, including world history, cultural studies, and historical analysis.',
+      location: 'Liberal Arts Building, 3rd Floor',
+      email: 'history@school.edu',
+      phoneNumber: '555-123-4571',
+    },
   ];
 
+  // Clear existing departments array
+  seedData.departments = [];
+
   for (const data of departmentData) {
-    const department = departmentRepository.create(data);
-    await departmentRepository.save(department);
-    seedData.departments.push(department);
+    // Check if department with this code already exists
+    const existingDepartment = await departmentRepository.findOne({
+      where: { code: data.code },
+    });
+
+    if (existingDepartment) {
+      console.log(`Department with code ${data.code} already exists, skipping`);
+      // Add to seedData to be used by other functions
+      seedData.departments.push(existingDepartment);
+      continue;
+    }
+
+    // Create new department
+    try {
+      const department = departmentRepository.create(data);
+      await departmentRepository.save(department);
+      seedData.departments.push(department);
+      console.log(
+        `Created department: ${department.name} (${department.code})`,
+      );
+    } catch (error: unknown) {
+      console.error(
+        `Error creating department with code ${data.code}:`,
+        error instanceof Error ? error.message : 'Unknown error',
+      );
+    }
   }
 
-  console.log(`Created ${departmentData.length} departments`);
+  console.log(`Using ${seedData.departments.length} departments for seeding`);
   return seedData.departments;
 }
 
@@ -288,6 +354,9 @@ async function seedTeachers(): Promise<Teacher[]> {
   const teacherAddressRepository = AppDataSource.getRepository(TeacherAddress);
   console.log('Seeding teachers...');
 
+  // Clear existing teachers array
+  seedData.teachers = [];
+
   const teacherData = [
     {
       firstName: 'John',
@@ -336,57 +405,113 @@ async function seedTeachers(): Promise<Teacher[]> {
   ];
 
   for (const data of teacherData) {
-    // Create teacher
-    const teacher = teacherRepository.create(data);
-    await teacherRepository.save(teacher);
+    try {
+      // Check if teacher already exists
+      const existingTeacher = await teacherRepository.findOne({
+        where: { email: data.email },
+      });
 
-    // Create a user account for the teacher
-    const user = userRepository.create({
-      email: teacher.email,
-      username: teacher.email.split('@')[0],
-      password: await argon2.hash('password'),
-      role: Role.Teacher,
-      teacherId: teacher.id,
-      isActive: true,
-      teacher: teacher,
-    });
-    await userRepository.save(user);
+      if (existingTeacher) {
+        console.log(
+          `Teacher with email ${data.email} already exists, skipping`,
+        );
+        seedData.teachers.push(existingTeacher);
+        continue;
+      }
 
-    // Update the teacher object
-    teacher.user = user;
+      // Create teacher
+      const teacher = teacherRepository.create(data);
+      await teacherRepository.save(teacher);
 
-    // Also set the teacher's salary
-    await teacherRepository.update(teacher.id, { salary: data.salary });
+      // Create a user account for the teacher
+      const user = userRepository.create({
+        email: teacher.email,
+        username: teacher.email.split('@')[0],
+        password: await argon2.hash('password'),
+        role: Role.Teacher,
+        teacherId: teacher.id,
+        isActive: true,
+      });
+      await userRepository.save(user);
 
-    // Initialize departments array and add the department
-    const department = seedData.departments.find(
-      (dept) => dept.id === data.departmentId,
-    );
-    if (department) {
-      teacher.departments = [department];
+      // Update the teacher object
+      teacher.user = user;
+
+      // Also set the teacher's salary
+      await teacherRepository.update(teacher.id, { salary: data.salary });
+
+      // Get the department
+      const department = seedData.departments.find(
+        (dept) => dept.id === data.departmentId,
+      );
+
+      if (department) {
+        // We need to manually insert into the teacher_departments junction table
+        await AppDataSource.query(
+          `INSERT INTO teacher_departments ("teacher_id", "department_id") VALUES ($1, $2)`,
+          [teacher.id, department.id],
+        );
+        console.log(
+          `Assigned teacher ${teacher.firstName} to department ${department.name}`,
+        );
+      }
+
+      // Assign an address to each teacher
+      const addressIndex = seedData.teachers.length % seedData.addresses.length;
+      const address = seedData.addresses[addressIndex];
+
+      const teacherAddress = teacherAddressRepository.create({
+        teacherId: teacher.id,
+        addressId: address.id,
+        addressType: 'Primary',
+      });
+
+      await teacherAddressRepository.save(teacherAddress);
+
+      seedData.teachers.push(teacher);
+      console.log(`Created teacher: ${teacher.firstName} ${teacher.lastName}`);
+    } catch (error: unknown) {
+      console.error(
+        `Error creating teacher ${data.firstName} ${data.lastName}:`,
+        error instanceof Error ? error.message : 'Unknown error',
+      );
     }
-
-    // Assign an address to each teacher
-    const addressIndex = seedData.teachers.length % seedData.addresses.length;
-    const address = seedData.addresses[addressIndex];
-
-    const teacherAddress = teacherAddressRepository.create({
-      teacherId: teacher.id,
-      addressId: address.id,
-      addressType: 'Primary',
-      teacher: teacher,
-      address: address,
-    });
-
-    await teacherAddressRepository.save(teacherAddress);
-
-    seedData.teachers.push(teacher);
   }
 
-  console.log(
-    `Created ${teacherData.length} teachers with user accounts and addresses`,
-  );
+  console.log(`Using ${seedData.teachers.length} teachers for seeding`);
   return seedData.teachers;
+}
+
+async function updateDepartmentHeads(): Promise<void> {
+  const departmentRepository = AppDataSource.getRepository(Department);
+  console.log('Updating department heads...');
+
+  // Assign department heads based on teachers
+  const departmentHeadAssignments = [
+    { departmentIndex: 0, teacherIndex: 0 }, // CS - John Smith
+    { departmentIndex: 1, teacherIndex: 1 }, // Math - Sarah Johnson
+    { departmentIndex: 2, teacherIndex: 2 }, // Physics - Robert Williams
+    { departmentIndex: 3, teacherIndex: 3 }, // English - Emily Davis
+    // History will have no head initially
+  ];
+
+  for (const assignment of departmentHeadAssignments) {
+    const department = seedData.departments[assignment.departmentIndex];
+    const teacher = seedData.teachers[assignment.teacherIndex];
+
+    if (department && teacher) {
+      console.log(
+        `Setting ${teacher.firstName} ${teacher.lastName} as head of ${department.name} department`,
+      );
+
+      department.headId = teacher.id;
+      department.head = teacher;
+
+      await departmentRepository.save(department);
+    }
+  }
+
+  console.log('Department heads updated successfully');
 }
 
 async function seedCourses(): Promise<Course[]> {
@@ -440,14 +565,27 @@ async function seedCourses(): Promise<Course[]> {
   ];
 
   for (const data of courseData) {
+    // Get department ID but don't include the full department object to avoid circular reference
     const department = seedData.departments.find(
       (d) => d.id === data.departmentId,
     );
 
+    if (!department) {
+      console.log(
+        `Department with ID ${data.departmentId} not found for course ${data.name}`,
+      );
+      continue;
+    }
+
     const course = courseRepository.create({
-      ...data,
-      department: department,
+      name: data.name,
+      description: data.description,
+      credits: data.credits,
+      required: data.required,
+      departmentId: data.departmentId,
+      // Don't include the full department object to avoid circular reference
     });
+
     await courseRepository.save(course);
     seedData.courses.push(course);
   }
@@ -462,6 +600,9 @@ async function seedClasses(): Promise<ClassRoom[]> {
     AppDataSource.getRepository(ClassAssignment);
   console.log('Seeding classes...');
 
+  // Clear existing classes array
+  seedData.classes = [];
+
   // The current semester with fallback
   const currentSemester =
     seedData.semesters.find((s) => s.currentSemester === true) ||
@@ -470,66 +611,86 @@ async function seedClasses(): Promise<ClassRoom[]> {
   // Create multiple classes for each course
   for (const course of seedData.courses) {
     // Morning class
-    const morningClass = classRepository.create({
-      name: `${course.name} - Morning`,
-      courseId: course.id,
-      semesterId: currentSemester.id,
-      startTime: new Date(2024, 0, 1, 9, 0), // 9:00 AM
-      endTime: new Date(2024, 0, 1, 10, 30), // 10:30 AM
-      dayOfWeek: DayOfWeek.Monday,
-      roomId: seedData.rooms[0].id,
-      maxEnrollment: 25,
-      course: course,
-      semester: currentSemester,
-      room: seedData.rooms[0],
-    });
-    await classRepository.save(morningClass);
-
-    // Afternoon class
-    const afternoonClass = classRepository.create({
-      name: `${course.name} - Afternoon`,
-      courseId: course.id,
-      semesterId: currentSemester.id,
-      startTime: new Date(2024, 0, 1, 14, 0), // 2:00 PM
-      endTime: new Date(2024, 0, 1, 15, 30), // 3:30 PM
-      dayOfWeek: DayOfWeek.Wednesday,
-      roomId: seedData.rooms[1].id,
-      maxEnrollment: 25,
-      course: course,
-      semester: currentSemester,
-      room: seedData.rooms[1],
-    });
-    await classRepository.save(afternoonClass);
-
-    seedData.classes.push(morningClass, afternoonClass);
-
-    // Assign teachers to classes
-    const departmentId = course.departmentId;
-    const eligibleTeachers = seedData.teachers.filter((teacher) =>
-      teacher.departments.some((dept) => dept.id === departmentId),
-    );
-
-    if (eligibleTeachers.length > 0) {
-      // Assign for morning class
-      const morningTeacher = eligibleTeachers[0];
-      const morningAssignment = classAssignmentRepository.create({
-        teacherId: morningTeacher.id,
-        classId: morningClass.id,
-        teacher: morningTeacher,
-        classRoom: morningClass,
+    try {
+      const morningClass = classRepository.create({
+        name: `${course.name} - Morning`,
+        courseId: course.id,
+        semesterId: currentSemester.id,
+        startTime: new Date(2024, 0, 1, 9, 0), // 9:00 AM
+        endTime: new Date(2024, 0, 1, 10, 30), // 10:30 AM
+        dayOfWeek: DayOfWeek.Monday,
+        roomId: seedData.rooms[0].id,
+        maxEnrollment: 25,
+        // Don't include full objects to avoid circular references
       });
-      await classAssignmentRepository.save(morningAssignment);
 
-      // Assign for afternoon class (use a different teacher if available)
-      const afternoonTeacher =
-        eligibleTeachers.length > 1 ? eligibleTeachers[1] : eligibleTeachers[0];
-      const afternoonAssignment = classAssignmentRepository.create({
-        teacherId: afternoonTeacher.id,
-        classId: afternoonClass.id,
-        teacher: afternoonTeacher,
-        classRoom: afternoonClass,
+      await classRepository.save(morningClass);
+      seedData.classes.push(morningClass);
+      console.log(`Created class: ${morningClass.name}`);
+
+      // Afternoon class
+      const afternoonClass = classRepository.create({
+        name: `${course.name} - Afternoon`,
+        courseId: course.id,
+        semesterId: currentSemester.id,
+        startTime: new Date(2024, 0, 1, 14, 0), // 2:00 PM
+        endTime: new Date(2024, 0, 1, 15, 30), // 3:30 PM
+        dayOfWeek: DayOfWeek.Wednesday,
+        roomId: seedData.rooms[1].id,
+        maxEnrollment: 25,
+        // Don't include full objects to avoid circular references
       });
-      await classAssignmentRepository.save(afternoonAssignment);
+
+      await classRepository.save(afternoonClass);
+      seedData.classes.push(afternoonClass);
+      console.log(`Created class: ${afternoonClass.name}`);
+
+      // Assign teachers to classes
+      const departmentId = course.departmentId;
+      // Instead of filtering teachers with complex conditions, get teachers by department ID from database
+      if (departmentId) {
+        const departmentTeachers = await AppDataSource.getRepository(Teacher)
+          .createQueryBuilder('teacher')
+          .innerJoin('teacher.departments', 'department')
+          .where('department.id = :departmentId', { departmentId })
+          .getMany();
+
+        if (departmentTeachers.length > 0) {
+          // Assign for morning class
+          const morningTeacher = departmentTeachers[0];
+          const morningAssignment = classAssignmentRepository.create({
+            teacherId: morningTeacher.id,
+            classId: morningClass.id,
+            // Don't include full objects to avoid circular references
+          });
+          await classAssignmentRepository.save(morningAssignment);
+          console.log(
+            `Assigned teacher ${morningTeacher.firstName} to class ${morningClass.name}`,
+          );
+
+          // Assign for afternoon class (use a different teacher if available)
+          const afternoonTeacher =
+            departmentTeachers.length > 1
+              ? departmentTeachers[1]
+              : departmentTeachers[0];
+          const afternoonAssignment = classAssignmentRepository.create({
+            teacherId: afternoonTeacher.id,
+            classId: afternoonClass.id,
+            // Don't include full objects to avoid circular references
+          });
+          await classAssignmentRepository.save(afternoonAssignment);
+          console.log(
+            `Assigned teacher ${afternoonTeacher.firstName} to class ${afternoonClass.name}`,
+          );
+        } else {
+          console.log(`No teachers found for department ID ${departmentId}`);
+        }
+      }
+    } catch (error: unknown) {
+      console.error(
+        `Error creating classes for course ${course.name}:`,
+        error instanceof Error ? error.message : 'Unknown error',
+      );
     }
   }
 
@@ -920,6 +1081,7 @@ async function main() {
     await seedSemesters();
     await seedAddresses(); // Seed addresses before teachers and students
     await seedTeachers();
+    await updateDepartmentHeads();
     await seedCourses();
     await seedClasses();
     await seedParents();
