@@ -87,7 +87,7 @@ export class StudentsService extends BaseService<Student> {
 
           // 3. Create address
           const address = entityManager.create(Address, {
-            address: groupedData.contact.address,
+            street: groupedData.contact.street,
             state: groupedData.contact.state,
             zipCode: groupedData.contact.zipCode,
             city: groupedData.contact.city,

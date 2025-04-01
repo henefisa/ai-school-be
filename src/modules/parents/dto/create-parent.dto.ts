@@ -11,7 +11,7 @@ import {
 } from 'class-validator';
 import { EmergencyContactDto } from './emergency-contact.dto';
 
-class PersonalInfoDto {
+export class PersonalInfoDto {
   @ApiProperty({
     example: 'John',
     description: 'First name of the parent',
@@ -36,6 +36,24 @@ class PersonalInfoDto {
   @IsString()
   @IsOptional()
   occupation?: string;
+
+  @ApiProperty({
+    example: 'john.smith',
+    description:
+      'Username for parent login (optional - will be generated if not provided)',
+    required: true,
+  })
+  @IsString()
+  username: string;
+
+  @ApiProperty({
+    example: 'securePassword123',
+    description:
+      'Password for parent login (optional - default will be used if not provided)',
+    required: true,
+  })
+  @IsString()
+  password: string;
 }
 
 class ContactInfoDto {
@@ -62,7 +80,7 @@ class ContactInfoDto {
   })
   @IsString()
   @IsNotEmpty()
-  address: string;
+  street: string;
 
   @ApiProperty({
     example: 'New York',

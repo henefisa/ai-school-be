@@ -6,10 +6,11 @@ import { ParentsService } from './parents.service';
 import { Student } from 'src/typeorm/entities/student.entity';
 import { EmergencyContact } from 'src/typeorm/entities/emergency-contact.entity';
 import { AddressesModule } from '../addresses/addresses.module';
+import { User } from 'src/typeorm/entities/user.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Parent, Student, EmergencyContact]),
+    TypeOrmModule.forFeature([Parent, Student, EmergencyContact, User]),
     AddressesModule,
   ],
   controllers: [ParentsController],

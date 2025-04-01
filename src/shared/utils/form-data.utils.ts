@@ -61,7 +61,7 @@ export interface GroupedStudentFormData {
     studentId?: string;
   };
   contact: {
-    address: string;
+    street: string;
     city: string;
     state: string;
     zipCode: string;
@@ -131,7 +131,7 @@ export interface GroupedTeacherFormData {
     password: string;
   };
   contact: {
-    address: string;
+    street: string;
     city: string;
     state: string;
     zipCode: string;

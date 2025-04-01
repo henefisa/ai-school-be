@@ -4,6 +4,7 @@ import { Role } from '../../shared/constants';
 import { Student } from './student.entity';
 import { Teacher } from './teacher.entity';
 import * as argon2 from 'argon2';
+import { Parent } from './parent.entity';
 
 /**
  * User entity representing system users with authentication and role-based capabilities
@@ -28,6 +29,9 @@ export class User extends BaseEntity {
   @Column({ nullable: true, type: 'uuid' })
   studentId: string;
 
+  @Column({ nullable: true, type: 'uuid' })
+  parentId: string;
+
   @Column({ type: 'boolean', default: true })
   isActive: boolean;
 
@@ -44,6 +48,10 @@ export class User extends BaseEntity {
   @OneToOne(() => Teacher, (teacher) => teacher.user)
   @JoinColumn({ name: 'teacher_id' })
   teacher: Teacher;
+
+  @OneToOne(() => Parent)
+  @JoinColumn({ name: 'parent_id' })
+  parent: Parent;
 
   /**
    * Hashes password before inserting into database

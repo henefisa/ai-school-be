@@ -96,16 +96,7 @@ export class CreateTeacherDto {
   })
   @IsString()
   @IsNotEmpty()
-  'contact.addressLine1': string;
-
-  @ApiProperty({
-    description: 'Additional address information',
-    example: 'Apartment 4B',
-    required: false,
-  })
-  @IsOptional()
-  @IsString()
-  'contact.addressLine2'?: string;
+  'contact.street': string;
 
   @ApiProperty({
     description: 'City',

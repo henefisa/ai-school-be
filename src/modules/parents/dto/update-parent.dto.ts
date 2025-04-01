@@ -37,6 +37,24 @@ class PersonalInfoUpdateDto {
   @IsString()
   @IsOptional()
   occupation?: string;
+
+  @ApiProperty({
+    example: 'john.smith',
+    description: 'Username for login',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  username?: string;
+
+  @ApiProperty({
+    example: 'newSecurePassword123',
+    description: 'New password for login',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  password?: string;
 }
 
 class ContactInfoUpdateDto {

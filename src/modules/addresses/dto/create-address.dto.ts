@@ -4,12 +4,12 @@ import { IsOptional, IsString } from 'class-validator';
 export class CreateAddressDto {
   @ApiProperty({
     example: 'Apt 4B',
-    description: 'Address',
+    description: 'Steet Address',
     required: false,
   })
   @IsOptional()
   @IsString()
-  address?: string;
+  street?: string;
 
   @ApiProperty({
     example: 'New York',

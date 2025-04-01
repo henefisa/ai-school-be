@@ -93,7 +93,7 @@ export class TeachersService extends BaseService<Teacher> {
 
       // Create address using AddressesService
       const addressDto: CreateAddressDto = {
-        address: groupedData.contact.address,
+        street: groupedData.contact.street,
         city: groupedData.contact.city,
         state: groupedData.contact.state,
         zipCode: groupedData.contact.zipCode,

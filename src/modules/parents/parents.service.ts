@@ -13,6 +13,9 @@ import { AddressesService } from '../addresses/addresses.service';
 import { CreateAddressDto } from '../addresses/dto/create-address.dto';
 import { ParentAddress } from 'src/typeorm/entities/parent-address.entity';
 import { Address } from 'src/typeorm/entities/address.entity';
+import { User } from 'src/typeorm/entities/user.entity';
+import { Role } from 'src/shared/constants';
+import * as argon2 from 'argon2';
 
 @Injectable()
 export class ParentsService extends BaseService<Parent> {
@@ -21,6 +24,8 @@ export class ParentsService extends BaseService<Parent> {
     private readonly parentRepository: Repository<Parent>,
     @InjectRepository(Student)
     private readonly studentRepository: Repository<Student>,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
     private readonly addressesService: AddressesService,
   ) {
     super(EntityName.Parent, parentRepository);
@@ -41,9 +46,31 @@ export class ParentsService extends BaseService<Parent> {
       const parent = entityManager.create(Parent, parentData);
       const savedParent = await entityManager.save(Parent, parent);
 
+      // Create user account for parent
+      const username = createParentDto.personal.username;
+
+      const hashedPassword = await argon2.hash(
+        createParentDto.personal.password,
+      );
+
+      const user = entityManager.create(User, {
+        email: createParentDto.contact.email,
+        username,
+        password: hashedPassword,
+        role: Role.Parent,
+        isActive: true,
+        parentId: savedParent.id,
+      });
+
+      const savedUser = await entityManager.save(User, user);
+
+      // Update parent with user reference (if needed)
+      savedParent.user = savedUser;
+      await entityManager.save(Parent, savedParent);
+
       // Create address - address is required
       const addressDto: CreateAddressDto = {
-        address: createParentDto.contact.address,
+        street: createParentDto.contact.street,
         city: createParentDto.contact.city,
         state: createParentDto.contact.state,
         zipCode: createParentDto.contact.zipCode,
@@ -82,7 +109,9 @@ export class ParentsService extends BaseService<Parent> {
   }
 
   async getParents(dto: GetParentsDto) {
-    const queryBuilder = this.parentRepository.createQueryBuilder('parent');
+    const queryBuilder = this.parentRepository
+      .createQueryBuilder('parent')
+      .innerJoinAndSelect('parent.user', 'user');
 
     // Apply search filter if query parameter exists
     if (dto.q) {
@@ -94,14 +123,14 @@ export class ParentsService extends BaseService<Parent> {
 
     // Join with User to get status information
     if (dto.status !== undefined) {
-      queryBuilder
-        .leftJoin('user', 'user', 'user.parent_id = parent.id')
-        .andWhere('user.is_active = :status', { status: dto.status });
+      queryBuilder.andWhere('user.is_active = :status', {
+        status: dto.status,
+      });
     }
 
     // Apply pagination
     queryBuilder
-      .skip(dto.page && dto.pageSize ? (dto.page - 1) * dto.pageSize : 0)
+      .skip(dto.skip)
       .take(dto.pageSize || 10)
       .orderBy('parent.created_at', 'DESC');
 
@@ -156,6 +185,7 @@ export class ParentsService extends BaseService<Parent> {
               address: true,
             },
             emergencyContacts: true,
+            user: true,
           },
         },
         entityManager,
@@ -191,6 +221,33 @@ export class ParentsService extends BaseService<Parent> {
       // Apply parent updates
       Object.assign(parent, parentData);
       const updatedParent = await entityManager.save(Parent, parent);
+
+      // Update user information if username or password provided
+      if (
+        parent.user &&
+        updateParentDto.personal &&
+        (updateParentDto.personal.username || updateParentDto.personal.password)
+      ) {
+        const userData: Partial<User> = {};
+
+        if (updateParentDto.personal.username) {
+          userData.username = updateParentDto.personal.username;
+        }
+
+        if (updateParentDto.personal.password) {
+          userData.password = await argon2.hash(
+            updateParentDto.personal.password,
+          );
+        }
+
+        // If email is updated, also update it on the user account
+        if (updateParentDto.contact?.email) {
+          userData.email = updateParentDto.contact.email;
+        }
+
+        // Apply user updates
+        await entityManager.update(User, { id: parent.user.id }, userData);
+      }
 
       // Update emergency contacts if provided
       if (Array.isArray(updateParentDto.emergencyContacts)) {
@@ -237,6 +294,7 @@ export class ParentsService extends BaseService<Parent> {
               address: true,
             },
             emergencyContacts: true,
+            user: true,
           },
         },
         entityManager,
@@ -283,6 +341,11 @@ export class ParentsService extends BaseService<Parent> {
             await entityManager.softDelete(Address, { id: addressId });
           }
         }
+      }
+
+      // Soft delete the associated user account if it exists
+      if (parent.user) {
+        await entityManager.softDelete(User, { id: parent.user.id });
       }
 
       // Finally, delete the parent

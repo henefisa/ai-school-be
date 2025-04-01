@@ -545,35 +545,35 @@ async function seedAddresses(): Promise<Address[]> {
 
   const addressData = [
     {
-      address: '123 Main St, Apt 4B',
+      street: '123 Main St, Apt 4B',
       city: 'New York',
       state: 'NY',
       zipCode: '10001',
       country: 'USA',
     },
     {
-      address: '456 Oak Ave',
+      street: '456 Oak Ave',
       city: 'Chicago',
       state: 'IL',
       zipCode: '60601',
       country: 'USA',
     },
     {
-      address: '789 Pine Rd, Suite 101',
+      street: '789 Pine Rd, Suite 101',
       city: 'Los Angeles',
       state: 'CA',
       zipCode: '90001',
       country: 'USA',
     },
     {
-      address: '101 Maple Dr',
+      street: '101 Maple Dr',
       city: 'Houston',
       state: 'TX',
       zipCode: '77001',
       country: 'USA',
     },
     {
-      address: '202 Cedar Ln, Unit 7',
+      street: '202 Cedar Ln, Unit 7',
       city: 'Miami',
       state: 'FL',
       zipCode: '33101',
@@ -596,6 +596,7 @@ async function seedParents(): Promise<Parent[]> {
   const parentAddressRepository = AppDataSource.getRepository(ParentAddress);
   const emergencyContactRepository =
     AppDataSource.getRepository(EmergencyContact);
+  const userRepository = AppDataSource.getRepository(User);
   console.log('Seeding parents...');
 
   const parentData = [
@@ -679,6 +680,20 @@ async function seedParents(): Promise<Parent[]> {
     await parentRepository.save(parent);
     seedData.parents.push(parent);
 
+    // Create user account for parent
+    const username = `${data.firstName.toLowerCase()}.${data.lastName.toLowerCase()}`;
+    const user = userRepository.create({
+      email: data.email,
+      username,
+      password: await argon2.hash('password'),
+      role: Role.Parent,
+      parentId: parent.id,
+      isActive: true,
+    });
+
+    await userRepository.save(user);
+    seedData.users.push(user);
+
     // Assign an address to each parent
     const address = seedData.addresses[i % seedData.addresses.length];
 
@@ -710,7 +725,7 @@ async function seedParents(): Promise<Parent[]> {
   }
 
   console.log(
-    `Created ${parentData.length} parents with addresses and emergency contacts`,
+    `Created ${parentData.length} parents with user accounts, addresses and emergency contacts`,
   );
   return seedData.parents;
 }

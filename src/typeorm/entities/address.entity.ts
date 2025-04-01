@@ -7,7 +7,7 @@ import { TeacherAddress } from './teacher-address.entity';
 @Entity('addresses')
 export class Address extends BaseEntity {
   @Column({ default: '' })
-  address: string;
+  street: string;
 
   @Column({ default: '' })
   city: string;

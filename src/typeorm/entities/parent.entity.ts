@@ -1,9 +1,10 @@
-import { Column, Entity, OneToMany } from 'typeorm';
+import { Column, Entity, OneToMany, OneToOne } from 'typeorm';
 import { BaseEntity } from './base.entity';
 import { RelationshipToStudent } from 'src/shared/constants';
 import { ParentAddress } from './parent-address.entity';
 import { Student } from './student.entity';
 import { EmergencyContact } from './emergency-contact.entity';
+import { User } from './user.entity';
 
 @Entity('parents')
 export class Parent extends BaseEntity {
@@ -42,4 +43,7 @@ export class Parent extends BaseEntity {
     (emergencyContact) => emergencyContact.parent,
   )
   emergencyContacts: EmergencyContact[];
+
+  @OneToOne(() => User, (user) => user.parent)
+  user: User;
 }

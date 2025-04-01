@@ -51,7 +51,7 @@ describe('Form Data Utilities', () => {
         'personal.username': 'john.doe',
         'personal.password': 'password123',
 
-        'contact.street': '123 Main St',
+        'contact.address': '123 Main St',
         'contact.city': 'New York',
         'contact.state': 'NY',
         'contact.zipCode': '10001',
