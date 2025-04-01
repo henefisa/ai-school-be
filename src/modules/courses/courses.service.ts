@@ -95,15 +95,7 @@ export class CoursesService extends BaseService<Course> {
         credits: dto.credits,
         required: dto.required,
         departmentId: dto.departmentId,
-        syllabus: dto.syllabus,
-        level: dto.level,
-        startDate: dto.startDate,
-        endDate: dto.endDate,
         status: dto.status || 'ACTIVE',
-        maxStudents: dto.maxStudents,
-        location: dto.location,
-        classDays: dto.classDays,
-        prerequisites: dto.prerequisites,
       });
 
       // 5. Save the course
@@ -183,10 +175,6 @@ export class CoursesService extends BaseService<Course> {
 
     if (dto.status) {
       where.status = dto.status;
-    }
-
-    if (dto.level) {
-      where.level = dto.level;
     }
 
     const orderBy: Record<string, 'ASC' | 'DESC'> = {};
@@ -275,10 +263,6 @@ export class CoursesService extends BaseService<Course> {
 
     if (dto.status) {
       where.status = dto.status;
-    }
-
-    if (dto.level) {
-      where.level = dto.level;
     }
 
     const orderBy: Record<string, 'ASC' | 'DESC'> = {};

@@ -26,32 +26,8 @@ export class Course extends BaseEntity {
   @Column({ nullable: true, type: 'boolean', default: false })
   required: boolean;
 
-  @Column({ nullable: true, type: 'text' })
-  syllabus: string;
-
-  @Column({ nullable: true, type: 'varchar', length: 50 })
-  level: string;
-
-  @Column({ nullable: true, type: 'date' })
-  startDate: Date;
-
-  @Column({ nullable: true, type: 'date' })
-  endDate: Date;
-
   @Column({ nullable: true, type: 'varchar', length: 50, default: 'ACTIVE' })
   status: string;
-
-  @Column({ nullable: true, type: 'integer', default: 30 })
-  maxStudents: number;
-
-  @Column({ nullable: true, type: 'varchar', length: 255 })
-  location: string;
-
-  @Column({ nullable: true, type: 'varchar', length: 255 })
-  classDays: string;
-
-  @Column({ nullable: true, type: 'jsonb' })
-  prerequisites: string[];
 
   @ManyToOne(() => Department, (department) => department.courses)
   department: Department;

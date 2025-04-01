@@ -527,16 +527,7 @@ async function seedCourses(): Promise<Course[]> {
       credits: 3,
       required: true,
       departmentId: seedData.departments[0].id, // Computer Science
-      syllabus:
-        'Introduction to programming concepts, data structures, and algorithms',
-      level: 'Beginner',
-      startDate: new Date(2024, 0, 15), // January 15, 2024
-      endDate: new Date(2024, 4, 31), // May 31, 2024
       status: 'ACTIVE',
-      maxStudents: 30,
-      location: 'Tech Building, Room 101',
-      classDays: 'Monday, Wednesday',
-      prerequisites: [],
     },
     {
       name: 'Data Structures and Algorithms',
@@ -545,16 +536,7 @@ async function seedCourses(): Promise<Course[]> {
       credits: 4,
       required: true,
       departmentId: seedData.departments[0].id, // Computer Science
-      syllabus:
-        'Arrays, linked lists, trees, graphs, sorting and searching algorithms',
-      level: 'Intermediate',
-      startDate: new Date(2024, 0, 15), // January 15, 2024
-      endDate: new Date(2024, 4, 31), // May 31, 2024
       status: 'ACTIVE',
-      maxStudents: 25,
-      location: 'Tech Building, Room 102',
-      classDays: 'Tuesday, Thursday',
-      prerequisites: ['CS101'],
     },
     {
       name: 'Calculus I',
@@ -563,15 +545,7 @@ async function seedCourses(): Promise<Course[]> {
       credits: 4,
       required: true,
       departmentId: seedData.departments[1].id, // Mathematics
-      syllabus: 'Limits, derivatives, integrals, and applications',
-      level: 'Beginner',
-      startDate: new Date(2024, 0, 15), // January 15, 2024
-      endDate: new Date(2024, 4, 31), // May 31, 2024
       status: 'ACTIVE',
-      maxStudents: 35,
-      location: 'Science Building, Room 201',
-      classDays: 'Monday, Wednesday, Friday',
-      prerequisites: [],
     },
     {
       name: 'Physics for Scientists and Engineers',
@@ -580,16 +554,7 @@ async function seedCourses(): Promise<Course[]> {
       credits: 4,
       required: true,
       departmentId: seedData.departments[2].id, // Physics
-      syllabus:
-        'Kinematics, dynamics, conservation laws, fluid mechanics, and thermodynamics',
-      level: 'Intermediate',
-      startDate: new Date(2024, 0, 15), // January 15, 2024
-      endDate: new Date(2024, 4, 31), // May 31, 2024
       status: 'ACTIVE',
-      maxStudents: 30,
-      location: 'Science Building, Room 101',
-      classDays: 'Tuesday, Thursday',
-      prerequisites: ['MATH101'],
     },
     {
       name: 'English Composition',
@@ -598,15 +563,7 @@ async function seedCourses(): Promise<Course[]> {
       credits: 3,
       required: true,
       departmentId: seedData.departments[3].id, // English
-      syllabus: 'Writing process, rhetorical strategies, grammar, and style',
-      level: 'Beginner',
-      startDate: new Date(2024, 0, 15), // January 15, 2024
-      endDate: new Date(2024, 4, 31), // May 31, 2024
       status: 'ACTIVE',
-      maxStudents: 25,
-      location: 'Liberal Arts Building, Room 201',
-      classDays: 'Monday, Wednesday',
-      prerequisites: [],
     },
     {
       name: 'World History',
@@ -615,15 +572,7 @@ async function seedCourses(): Promise<Course[]> {
       credits: 3,
       required: false,
       departmentId: seedData.departments[4].id, // History
-      syllabus: 'Ancient civilizations to modern times, global perspectives',
-      level: 'Beginner',
-      startDate: new Date(2024, 0, 15), // January 15, 2024
-      endDate: new Date(2024, 4, 31), // May 31, 2024
       status: 'ACTIVE',
-      maxStudents: 40,
-      location: 'Liberal Arts Building, Room 301',
-      classDays: 'Tuesday, Thursday',
-      prerequisites: [],
     },
   ];
 

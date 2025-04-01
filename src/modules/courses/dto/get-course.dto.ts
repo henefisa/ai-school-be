@@ -48,15 +48,6 @@ export class GetCoursesDto extends PartialType(PaginationDto) {
   @IsString()
   @ApiProperty({
     required: false,
-    description: 'Filter by academic level',
-    example: 'Freshman',
-  })
-  level?: string;
-
-  @IsOptional()
-  @IsString()
-  @ApiProperty({
-    required: false,
     description: 'Sort field',
     example: 'name',
   })

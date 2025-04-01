@@ -1,9 +1,6 @@
 import { Type } from 'class-transformer';
 import {
-  IsArray,
   IsBoolean,
-  IsDate,
-  IsInt,
   IsNotEmpty,
   IsNumber,
   IsOptional,
@@ -53,54 +50,7 @@ export class CreateCourseDto {
 
   @IsOptional()
   @IsString()
-  @ApiProperty({
-    example: 'Complete syllabus content with weekly topics and readings',
-  })
-  syllabus?: string;
-
-  @IsOptional()
-  @IsString()
-  @MaxLength(50)
-  @ApiProperty({ example: 'Freshman' })
-  level?: string;
-
-  @IsOptional()
-  @Type(() => Date)
-  @IsDate()
-  @ApiProperty({ example: '2023-09-01' })
-  startDate?: Date;
-
-  @IsOptional()
-  @Type(() => Date)
-  @IsDate()
-  @ApiProperty({ example: '2023-12-15' })
-  endDate?: Date;
-
-  @IsOptional()
-  @IsString()
   @MaxLength(50)
   @ApiProperty({ example: 'ACTIVE' })
   status?: string;
-
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  @ApiProperty({ example: 30 })
-  maxStudents?: number;
-
-  @IsOptional()
-  @IsString()
-  @ApiProperty({ example: 'Main Building, Room 101' })
-  location?: string;
-
-  @IsOptional()
-  @IsString()
-  @ApiProperty({ example: 'Monday, Wednesday, Friday' })
-  classDays?: string;
-
-  @IsOptional()
-  @IsArray()
-  @ApiProperty({ example: ['MATH101', 'CS100'] })
-  prerequisites?: string[];
 }
