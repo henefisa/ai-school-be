@@ -14,7 +14,7 @@ import { GetEnrollmentsDto } from './dto/get-enrollment.dto';
 import { JwtAuthGuard } from 'src/shared/guards/jwt-auth.guard';
 import { Roles } from 'src/shared/decorators/roles.decorator';
 import { Role } from 'src/shared/constants';
-import { RoleGuard } from 'src/shared/guards/roles.guard';
+import { RolesGuard } from 'src/shared/guards/roles.guard';
 import { Request } from 'express';
 import { RegisterEnrollmentDto } from './dto/register-enrollment.dto';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
@@ -33,7 +33,7 @@ export class EnrollmentsController {
 
   @Post()
   @Roles(Role.Student)
-  @UseGuards(RoleGuard)
+  @UseGuards(RolesGuard)
   @ApiBearerAuth()
   async register(@Req() req: Request, @Body() dto: RegisterEnrollmentDto) {
     const studentId = req.user.studentId;
@@ -42,7 +42,7 @@ export class EnrollmentsController {
 
   @Delete(':id')
   @Roles(Role.Student)
-  @UseGuards(RoleGuard)
+  @UseGuards(RolesGuard)
   @ApiBearerAuth()
   async delete(@Req() req: Request, @Param('id') id: string) {
     const studentId = req.user.studentId;

@@ -12,14 +12,14 @@ import {
 import { SemestersService } from './semesters.service';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/shared/guards/jwt-auth.guard';
-import { RoleGuard } from 'src/shared/guards/roles.guard';
+import { RolesGuard } from 'src/shared/guards/roles.guard';
 import { Roles } from 'src/shared/decorators/roles.decorator';
 import { Role } from 'src/shared/constants';
 import { GetSemestersDto } from './dto/get-semester.dto';
 import { CreateSemesterDto } from './dto/create-semester.dto';
 import { UpdateSemesterDto } from './dto/update-semester.dto';
 
-@UseGuards(JwtAuthGuard, RoleGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(Role.Admin)
 @ApiTags('Semesters')
 @ApiBearerAuth()

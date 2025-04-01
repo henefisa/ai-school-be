@@ -12,6 +12,7 @@ describe('CoursesController', () => {
   const mockCourse = {
     id: '1',
     name: 'Test Course',
+    code: 'TEST101',
     description: 'Test Description',
     credits: 3,
     required: true,
@@ -29,14 +30,34 @@ describe('CoursesController', () => {
           provide: CoursesService,
           useValue: {
             create: jest.fn().mockResolvedValue(mockCourse),
-            getCourses: jest
-              .fn()
-              .mockResolvedValue({ results: mockCourses, count: mockCount }),
+            getCourses: jest.fn().mockResolvedValue({
+              results: mockCourses,
+              count: mockCount,
+              page: 1,
+              pageSize: 10,
+              totalPages: 1,
+            }),
             getOneOrThrow: jest.fn().mockResolvedValue(mockCourse),
+            getCourseDetails: jest.fn().mockResolvedValue({
+              ...mockCourse,
+              teachersCount: 2,
+              teachers: [],
+              enrolledStudentsCount: 15,
+            }),
+            getDepartmentCourses: jest.fn().mockResolvedValue({
+              department: { id: 'dept1', name: 'Computer Science', code: 'CS' },
+              results: mockCourses,
+              count: mockCount,
+              page: 1,
+              pageSize: 10,
+              totalPages: 1,
+            }),
             update: jest
               .fn()
               .mockResolvedValue({ ...mockCourse, name: 'Updated Course' }),
-            delete: jest.fn().mockResolvedValue(undefined),
+            delete: jest.fn().mockResolvedValue({
+              message: 'Course deleted successfully',
+            }),
           },
         },
       ],
@@ -54,6 +75,7 @@ describe('CoursesController', () => {
     it('should create a course', async () => {
       const createCourseDto: CreateCourseDto = {
         name: 'New Course',
+        code: 'NEW101',
         description: 'New Description',
         credits: 3,
         required: true,
@@ -67,14 +89,20 @@ describe('CoursesController', () => {
     });
   });
 
-  describe('getCourse', () => {
+  describe('getCourses', () => {
     it('should return a list of courses', async () => {
       const getCoursesDto: GetCoursesDto = { page: 1, pageSize: 10 };
 
-      const result = await controller.getCourse(getCoursesDto);
+      const result = await controller.getCourses(getCoursesDto);
 
       expect(service.getCourses).toHaveBeenCalledWith(getCoursesDto);
-      expect(result).toEqual({ results: mockCourses, count: mockCount });
+      expect(result).toEqual({
+        results: mockCourses,
+        count: mockCount,
+        page: 1,
+        pageSize: 10,
+        totalPages: 1,
+      });
     });
   });
 
@@ -89,10 +117,40 @@ describe('CoursesController', () => {
     });
   });
 
+  describe('getCourseDetails', () => {
+    it('should return detailed course information', async () => {
+      const result = await controller.getCourseDetails('1');
+
+      expect(service.getCourseDetails).toHaveBeenCalledWith('1');
+      expect(result).toHaveProperty('teachersCount');
+      expect(result).toHaveProperty('enrolledStudentsCount');
+    });
+  });
+
+  describe('getCoursesByDepartment', () => {
+    it('should return courses by department ID', async () => {
+      const departmentId = 'dept1';
+      const getCoursesDto: GetCoursesDto = { page: 1, pageSize: 10 };
+
+      const result = await controller.getCoursesByDepartment(
+        departmentId,
+        getCoursesDto,
+      );
+
+      expect(service.getDepartmentCourses).toHaveBeenCalledWith(
+        departmentId,
+        getCoursesDto,
+      );
+      expect(result).toHaveProperty('department');
+      expect(result).toHaveProperty('results');
+    });
+  });
+
   describe('updateCourse', () => {
     it('should update a course by ID', async () => {
       const updateCourseDto: UpdateCourseDto = {
         name: 'Updated Course',
+        code: 'UPD101',
         description: 'Updated Description',
         credits: 4,
         required: false,
@@ -111,7 +169,7 @@ describe('CoursesController', () => {
       const result = await controller.remove('1');
 
       expect(service.delete).toHaveBeenCalledWith('1');
-      expect(result).toBeUndefined();
+      expect(result).toEqual({ message: 'Course deleted successfully' });
     });
   });
 });

@@ -18,13 +18,13 @@ import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { UpdateDepartmentDto } from './dto/update-department.dto';
 import { GetDepartmentDto } from './dto/get-department.dto';
 import { JwtAuthGuard } from 'src/shared/guards/jwt-auth.guard';
-import { RoleGuard } from 'src/shared/guards/roles.guard';
+import { RolesGuard } from 'src/shared/guards/roles.guard';
 import { Roles } from 'src/shared/decorators/roles.decorator';
 import { Role } from 'src/shared/constants';
 
 @Controller({ path: 'departments', version: '1' })
 @ApiTags('departments')
-@UseGuards(JwtAuthGuard, RoleGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class DepartmentsController {
   constructor(private readonly departmentsService: DepartmentsService) {}
 
