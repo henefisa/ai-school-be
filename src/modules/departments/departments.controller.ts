@@ -6,6 +6,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   Query,
@@ -74,8 +75,11 @@ export class DepartmentsController {
     status: HttpStatus.NOT_FOUND,
     description: 'Department not found',
   })
-  findOne(@Param('id') id: string, @Query() dto: GetDepartmentDto) {
-    return this.departmentsService.findOne({ ...dto, id });
+  findOne(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query() dto: GetDepartmentDto,
+  ) {
+    return this.departmentsService.findOne(id, dto);
   }
 
   /**

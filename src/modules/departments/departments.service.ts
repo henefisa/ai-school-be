@@ -228,10 +228,10 @@ export class DepartmentsService extends BaseService<Department> {
    * @returns The department if found
    * @throws NotFoundException if department not found
    */
-  async findOne(dto: GetDepartmentDto): Promise<Department> {
+  async findOne(id: string, dto: GetDepartmentDto): Promise<Department> {
     const queryBuilder = this.departmentRepository
       .createQueryBuilder('department')
-      .where('department.id = :id', { id: dto.id });
+      .where('department.id = :id', { id });
 
     // Include head teacher if requested
     if (dto.includeHead) {
@@ -251,7 +251,7 @@ export class DepartmentsService extends BaseService<Department> {
     const department = await queryBuilder.getOne();
 
     if (!department) {
-      throw new NotFoundException(`Department with ID ${dto.id} not found`);
+      throw new NotFoundException(`Department with ID ${id} not found`);
     }
 
     return department;

@@ -15,7 +15,7 @@ import {
 import { RoomType } from 'src/shared/constants';
 import { ApiProperty } from '@nestjs/swagger';
 
-class TimeSlot {
+export class TimeSlot {
   @IsString()
   @ApiProperty({ example: '08:00' })
   start: string;
@@ -25,12 +25,12 @@ class TimeSlot {
   end: string;
 }
 
-class OperationalHours {
+export class OperationalHours {
   @IsOptional()
   @ValidateNested({ each: true })
   @Type(() => TimeSlot)
   @ApiProperty({
-    type: [TimeSlot],
+    type: () => [TimeSlot],
     required: false,
     example: [
       { start: '08:00', end: '12:00' },
@@ -43,7 +43,7 @@ class OperationalHours {
   @ValidateNested({ each: true })
   @Type(() => TimeSlot)
   @ApiProperty({
-    type: [TimeSlot],
+    type: () => [TimeSlot],
     required: false,
     example: [
       { start: '08:00', end: '12:00' },
@@ -56,7 +56,7 @@ class OperationalHours {
   @ValidateNested({ each: true })
   @Type(() => TimeSlot)
   @ApiProperty({
-    type: [TimeSlot],
+    type: () => [TimeSlot],
     required: false,
     example: [
       { start: '08:00', end: '12:00' },
@@ -69,7 +69,7 @@ class OperationalHours {
   @ValidateNested({ each: true })
   @Type(() => TimeSlot)
   @ApiProperty({
-    type: [TimeSlot],
+    type: () => [TimeSlot],
     required: false,
     example: [
       { start: '08:00', end: '12:00' },
@@ -82,7 +82,7 @@ class OperationalHours {
   @ValidateNested({ each: true })
   @Type(() => TimeSlot)
   @ApiProperty({
-    type: [TimeSlot],
+    type: () => [TimeSlot],
     required: false,
     example: [
       { start: '08:00', end: '12:00' },
@@ -95,7 +95,7 @@ class OperationalHours {
   @ValidateNested({ each: true })
   @Type(() => TimeSlot)
   @ApiProperty({
-    type: [TimeSlot],
+    type: () => [TimeSlot],
     required: false,
     example: [{ start: '08:00', end: '12:00' }],
   })
@@ -105,7 +105,7 @@ class OperationalHours {
   @ValidateNested({ each: true })
   @Type(() => TimeSlot)
   @ApiProperty({
-    type: [TimeSlot],
+    type: () => [TimeSlot],
     required: false,
     example: [],
   })
@@ -174,7 +174,7 @@ export class CreateRoomDto {
   @Type(() => OperationalHours)
   @IsOptional()
   @ApiProperty({
-    type: OperationalHours,
+    type: () => OperationalHours,
     required: false,
   })
   operationalHours?: OperationalHours;

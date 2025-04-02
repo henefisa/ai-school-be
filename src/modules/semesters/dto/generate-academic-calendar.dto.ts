@@ -12,27 +12,32 @@ import {
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
-class SemesterPeriod {
+export class SemesterPeriod {
   @IsDate()
   @Type(() => Date)
+  @ApiProperty({ example: '2024-06-15' })
   startDate: Date;
 
   @IsDate()
   @Type(() => Date)
+  @ApiProperty({ example: '2024-08-15' })
   endDate: Date;
 }
 
-class Holiday {
+export class Holiday {
   @IsString()
   @IsNotEmpty()
+  @ApiProperty({ example: 'Winter Break' })
   name: string;
 
   @IsDate()
   @Type(() => Date)
+  @ApiProperty({ example: '2023-12-15' })
   startDate: Date;
 
   @IsDate()
   @Type(() => Date)
+  @ApiProperty({ example: '2024-01-05' })
   endDate: Date;
 }
 
@@ -97,7 +102,7 @@ export class GenerateAcademicCalendarDto {
   @ApiProperty({
     description: 'Optional start and end dates for summer semester',
     required: false,
-    type: SemesterPeriod,
+    type: () => SemesterPeriod,
     example: {
       startDate: '2024-06-15',
       endDate: '2024-08-15',
@@ -111,7 +116,7 @@ export class GenerateAcademicCalendarDto {
   @ApiProperty({
     description: 'Holidays and breaks to include in the calendar',
     required: false,
-    type: [Holiday],
+    type: () => [Holiday],
     example: [
       {
         name: 'Winter Break',
