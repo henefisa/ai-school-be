@@ -169,9 +169,10 @@ export class CreateTeacherDto {
     description: 'Department ID',
     example: '9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d',
   })
+  @IsOptional()
   @IsUUID(4)
   @IsNotEmpty()
-  'professional.departmentId': string;
+  'professional.departmentId'?: string;
 
   @ApiProperty({
     description: 'Position or title',

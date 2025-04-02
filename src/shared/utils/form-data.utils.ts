@@ -142,7 +142,7 @@ export interface GroupedTeacherFormData {
     addressType?: string;
   };
   professional: {
-    departmentId: string;
+    departmentId?: string;
     position: string;
     joinDate: string;
     employmentType: EmploymentType;

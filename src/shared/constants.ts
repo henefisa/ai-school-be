@@ -71,3 +71,9 @@ export enum EmploymentType {
   Contract = 'CONTRACT',
   Temporary = 'TEMPORARY',
 }
+
+export enum SemesterStatus {
+  Active = 'ACTIVE',
+  Upcoming = 'UPCOMING',
+  Completed = 'COMPLETED',
+}
