@@ -14,7 +14,12 @@ import {
 import { DepartmentsService } from './departments.service';
 import { CreateDepartmentDto } from './dto/create-department.dto';
 import { GetDepartmentsDto } from './dto/get-departments.dto';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { UpdateDepartmentDto } from './dto/update-department.dto';
 import { GetDepartmentDto } from './dto/get-department.dto';
 import { JwtAuthGuard } from 'src/shared/guards/jwt-auth.guard';
@@ -24,6 +29,7 @@ import { Role } from 'src/shared/constants';
 
 @Controller({ path: 'departments', version: '1' })
 @ApiTags('departments')
+@ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class DepartmentsController {
   constructor(private readonly departmentsService: DepartmentsService) {}
