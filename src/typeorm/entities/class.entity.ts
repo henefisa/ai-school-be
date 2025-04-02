@@ -18,8 +18,14 @@ export class ClassRoom extends BaseEntity {
   @Column({ nullable: true, type: 'uuid' })
   semesterId: string;
 
-  @Column({ nullable: true })
+  @Column({ nullable: false })
   name: string;
+
+  @Column({ nullable: true, type: 'varchar', length: 50 })
+  gradeLevel: string;
+
+  @Column({ nullable: true, type: 'varchar', length: 50 })
+  section: string;
 
   @Column({ nullable: true, type: 'timestamptz' })
   startTime: Date;
@@ -35,6 +41,18 @@ export class ClassRoom extends BaseEntity {
 
   @Column({ nullable: true, type: 'integer' })
   maxEnrollment: number;
+
+  @Column({ nullable: true, type: 'varchar', length: 50, default: 'ACTIVE' })
+  status: string;
+
+  @Column({ nullable: true, type: 'text' })
+  description: string;
+
+  @Column({ nullable: true, type: 'date' })
+  startDate: Date;
+
+  @Column({ nullable: true, type: 'date' })
+  endDate: Date;
 
   @OneToMany(() => Enrollment, (enrollment) => enrollment.classRoom)
   enrollments: Enrollment[];

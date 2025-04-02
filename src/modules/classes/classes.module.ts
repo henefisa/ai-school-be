@@ -4,9 +4,14 @@ import { ClassRoom } from 'src/typeorm/entities/class.entity';
 import { ClassesService } from './classes.service';
 import { CoursesModule } from '../courses/courses.module';
 import { ClassesController } from './classes.controller';
+import { ClassAssignment } from 'src/typeorm/entities/class-assignment.entity';
+import { Enrollment } from 'src/typeorm/entities/enrollment.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([ClassRoom]), CoursesModule],
+  imports: [
+    TypeOrmModule.forFeature([ClassRoom, ClassAssignment, Enrollment]),
+    CoursesModule,
+  ],
   controllers: [ClassesController],
   providers: [ClassesService],
   exports: [ClassesService],
