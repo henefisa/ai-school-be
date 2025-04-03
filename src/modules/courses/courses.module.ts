@@ -7,10 +7,19 @@ import { CoursesController } from './courses.controller';
 import { CoursesService } from './courses.service';
 import { ClassRoom } from 'src/typeorm/entities/class.entity';
 import { DepartmentsModule } from 'src/modules/departments/departments.module';
+import { CoursePrerequisite } from 'src/typeorm/entities/course-prerequisite.entity';
+import { Enrollment } from 'src/typeorm/entities/enrollment.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Course, Department, ClassAssignment, ClassRoom]),
+    TypeOrmModule.forFeature([
+      Course,
+      Department,
+      ClassAssignment,
+      ClassRoom,
+      CoursePrerequisite,
+      Enrollment,
+    ]),
     DepartmentsModule,
   ],
   controllers: [CoursesController],

@@ -40,6 +40,8 @@ import { Attendance } from '../../typeorm/entities/attendance.entity';
 import { Grade } from '../../typeorm/entities/grade.entity';
 import { EmergencyContact } from '../../typeorm/entities/emergency-contact.entity';
 import * as argon2 from 'argon2';
+import { CoursePrerequisite } from '../../typeorm/entities/course-prerequisite.entity';
+import { EnrollmentStatus } from '../../shared/constants';
 
 // Load environment variables with more debugging
 const envPath = path.resolve(process.cwd(), '.env');
@@ -82,6 +84,7 @@ const dbConfig = {
     Attendance,
     Grade,
     EmergencyContact,
+    CoursePrerequisite,
   ],
   synchronize: process.env.NODE_ENV !== 'production',
   logging: true,
@@ -580,6 +583,8 @@ async function updateDepartmentHeads(): Promise<void> {
 
 async function seedCourses(): Promise<Course[]> {
   const courseRepository = AppDataSource.getRepository(Course);
+  const prerequisiteRepository =
+    AppDataSource.getRepository(CoursePrerequisite);
   console.log('Seeding courses...');
 
   const courseData = [
@@ -677,7 +682,80 @@ async function seedCourses(): Promise<Course[]> {
     }
   }
 
-  console.log(`Created ${seedData.courses.length} courses`);
+  // Add course prerequisites
+  console.log('Setting up course prerequisites...');
+
+  // Define prerequisites
+  const prerequisites = [
+    // CS201 requires CS101
+    {
+      courseCode: 'CS201',
+      prerequisiteCode: 'CS101',
+      isRequired: true,
+      minGrade: 'C',
+      notes: 'Basic programming knowledge required for data structures',
+    },
+    // PHYS201 recommends MATH101
+    {
+      courseCode: 'PHYS201',
+      prerequisiteCode: 'MATH101',
+      isRequired: true,
+      minGrade: 'C',
+      notes: 'Calculus is necessary for physics concepts',
+    },
+  ];
+
+  // Create prerequisite relationships
+  for (const prereq of prerequisites) {
+    try {
+      const course = seedData.courses.find((c) => c.code === prereq.courseCode);
+      const prerequisiteCourse = seedData.courses.find(
+        (c) => c.code === prereq.prerequisiteCode,
+      );
+
+      if (!course || !prerequisiteCourse) {
+        console.log(
+          `Could not find course or prerequisite for ${prereq.courseCode} -> ${prereq.prerequisiteCode}`,
+        );
+        continue;
+      }
+
+      // Check if prerequisite already exists
+      const existingPrereq = await prerequisiteRepository.findOne({
+        where: {
+          courseId: course.id,
+          prerequisiteId: prerequisiteCourse.id,
+        },
+      });
+
+      if (existingPrereq) {
+        console.log(
+          `Prerequisite relationship already exists for ${course.code} -> ${prerequisiteCourse.code}, skipping`,
+        );
+        continue;
+      }
+
+      const prerequisiteRelation = prerequisiteRepository.create({
+        courseId: course.id,
+        prerequisiteId: prerequisiteCourse.id,
+        isRequired: prereq.isRequired,
+        minGrade: prereq.minGrade,
+        notes: prereq.notes,
+      });
+
+      await prerequisiteRepository.save(prerequisiteRelation);
+      console.log(
+        `Created prerequisite relationship: ${course.code} requires ${prerequisiteCourse.code}`,
+      );
+    } catch (error: unknown) {
+      console.error(
+        `Error creating prerequisite relationship:`,
+        error instanceof Error ? error.message : 'Unknown error',
+      );
+    }
+  }
+
+  console.log(`Created ${seedData.courses.length} courses with prerequisites`);
   return seedData.courses;
 }
 
@@ -1117,6 +1195,7 @@ async function seedEnrollments(): Promise<void> {
   console.log('Seeding enrollments...');
 
   let enrollmentCount = 0;
+  const statuses = Object.values(EnrollmentStatus);
 
   // Enroll each student in multiple classes
   for (const student of seedData.students) {
@@ -1137,16 +1216,92 @@ async function seedEnrollments(): Promise<void> {
     for (const classIndex of selectedClassIndices) {
       const classRoom = seedData.classes[classIndex];
 
-      const enrollment = enrollmentRepository.create({
-        studentId: student.id,
-        classId: classRoom.id,
-        enrollmentDate: new Date(),
-        student: student,
-        classRoom: classRoom,
-      });
+      // Select a random status, with higher probability for Active
+      const randomStatus =
+        Math.random() < 0.7
+          ? EnrollmentStatus.Active
+          : statuses[Math.floor(Math.random() * statuses.length)];
 
-      await enrollmentRepository.save(enrollment);
-      enrollmentCount++;
+      // Generate an enrollment date in the past (0-60 days ago)
+      const enrollmentDate = new Date();
+      enrollmentDate.setDate(
+        enrollmentDate.getDate() - Math.floor(Math.random() * 60),
+      );
+
+      // Create status history starting with initial enrollment
+      const statusHistory = [
+        {
+          status: EnrollmentStatus.Active,
+          date: new Date(enrollmentDate),
+          reason: 'Initial enrollment',
+        },
+      ];
+
+      // If not active, add a status change event
+      if (randomStatus !== EnrollmentStatus.Active) {
+        const statusChangeDate = new Date(enrollmentDate);
+        statusChangeDate.setDate(
+          statusChangeDate.getDate() + Math.floor(Math.random() * 30) + 1,
+        );
+
+        statusHistory.push({
+          status: randomStatus,
+          date: statusChangeDate,
+          reason:
+            randomStatus === EnrollmentStatus.Dropped
+              ? 'Student requested to drop the course'
+              : randomStatus === EnrollmentStatus.Completed
+                ? 'Course completed successfully'
+                : randomStatus === EnrollmentStatus.OnHold
+                  ? 'Administrative hold'
+                  : 'Added to waitlist due to course capacity',
+        });
+      }
+
+      // Set completion date for completed courses
+      let completionDate: Date | null = null;
+      if (randomStatus === EnrollmentStatus.Completed) {
+        completionDate = new Date();
+        completionDate.setDate(
+          completionDate.getDate() - Math.floor(Math.random() * 10),
+        );
+      }
+
+      // Add some notes for a portion of enrollments
+      const notes =
+        Math.random() < 0.3
+          ? 'Student shows particular interest in this subject.'
+          : null;
+
+      try {
+        // Create a new enrollment with type safety
+        const enrollment = new Enrollment();
+        enrollment.studentId = student.id;
+        enrollment.classId = classRoom.id;
+        enrollment.enrollmentDate = enrollmentDate;
+        enrollment.status = randomStatus;
+        enrollment.statusHistory = statusHistory;
+
+        // Handle nullable fields correctly
+        if (notes) {
+          enrollment.notes = notes;
+        }
+
+        if (completionDate) {
+          enrollment.completionDate = completionDate;
+        }
+
+        enrollment.student = student;
+        enrollment.classRoom = classRoom;
+
+        await enrollmentRepository.save(enrollment);
+        enrollmentCount++;
+      } catch (error) {
+        console.error(
+          `Error creating enrollment for student ${student.firstName} in class ${classRoom.name}:`,
+          error instanceof Error ? error.message : 'Unknown error',
+        );
+      }
     }
   }
 

@@ -2,6 +2,7 @@ import { Column, Entity, ManyToOne, OneToMany } from 'typeorm';
 import { BaseEntity } from './base.entity';
 import { Department } from './department.entity';
 import { ClassRoom } from './class.entity';
+import { CoursePrerequisite } from './course-prerequisite.entity';
 
 /**
  * Course entity representing academic courses in the educational system
@@ -34,4 +35,13 @@ export class Course extends BaseEntity {
 
   @OneToMany(() => ClassRoom, (classRoom) => classRoom.course)
   classes: ClassRoom[];
+
+  @OneToMany(() => CoursePrerequisite, (prerequisite) => prerequisite.course)
+  prerequisites: CoursePrerequisite[];
+
+  @OneToMany(
+    () => CoursePrerequisite,
+    (prerequisite) => prerequisite.prerequisite,
+  )
+  isPrerequisiteFor: CoursePrerequisite[];
 }

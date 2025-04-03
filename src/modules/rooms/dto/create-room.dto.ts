@@ -30,7 +30,8 @@ export class OperationalHours {
   @ValidateNested({ each: true })
   @Type(() => TimeSlot)
   @ApiProperty({
-    type: () => [TimeSlot],
+    type: () => TimeSlot,
+    isArray: true,
     required: false,
     example: [
       { start: '08:00', end: '12:00' },

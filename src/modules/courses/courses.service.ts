@@ -17,12 +17,21 @@ import { ExistsException } from 'src/shared/exceptions/exists.exception';
 import { ClassRoom } from 'src/typeorm/entities/class.entity';
 import { Teacher } from 'src/typeorm/entities/teacher.entity';
 import { DepartmentsService } from 'src/modules/departments/departments.service';
+import { AddPrerequisiteDto } from './dto/add-prerequisite.dto';
+import { CoursePrerequisite } from 'src/typeorm/entities/course-prerequisite.entity';
+import { NotFoundException } from '@nestjs/common';
+import { EnrollmentStatus, Grade } from 'src/shared/constants';
+import { Enrollment } from 'src/typeorm/entities/enrollment.entity';
 
 @Injectable()
 export class CoursesService extends BaseService<Course> {
   constructor(
     @InjectRepository(Course)
     private readonly courseRepository: Repository<Course>,
+    @InjectRepository(CoursePrerequisite)
+    private readonly prerequisiteRepository: Repository<CoursePrerequisite>,
+    @InjectRepository(Enrollment)
+    private readonly enrollmentRepository: Repository<Enrollment>,
     @InjectRepository(ClassRoom)
     private readonly classRoomRepository: Repository<ClassRoom>,
     private readonly departmentsService: DepartmentsService,
@@ -283,5 +292,204 @@ export class CoursesService extends BaseService<Course> {
       results,
       count,
     };
+  }
+
+  /**
+   * Add a prerequisite to a course
+   * @param courseId The course ID to add a prerequisite to
+   * @param dto The prerequisite details
+   * @returns The created prerequisite relationship
+   */
+  async addPrerequisite(courseId: string, dto: AddPrerequisiteDto) {
+    // Verify course exists
+    await this.getOneOrThrow({
+      where: { id: courseId },
+    });
+    // Verify prerequisite course exists
+    await this.getOneOrThrow({
+      where: { id: dto.prerequisiteId },
+    });
+    // Prevent a course from being a prerequisite of itself
+    if (courseId === dto.prerequisiteId) {
+      throw new BadRequestException(
+        'A course cannot be a prerequisite of itself',
+      );
+    }
+    // Check if the prerequisite relationship already exists
+    const existingPrereq = await this.prerequisiteRepository.findOne({
+      where: {
+        courseId,
+        prerequisiteId: dto.prerequisiteId,
+      },
+    });
+    if (existingPrereq) {
+      throw new ExistsException(EntityName.Course);
+    }
+    // Create and save prerequisite relationship
+    const prerequisiteRelation = this.prerequisiteRepository.create({
+      courseId,
+      prerequisiteId: dto.prerequisiteId,
+      minGrade: dto.minGrade,
+      isRequired: dto.isRequired ?? true,
+      notes: dto.notes,
+    });
+    return this.prerequisiteRepository.save(prerequisiteRelation);
+  }
+
+  /**
+   * Remove a prerequisite from a course
+   * @param courseId The course ID to remove a prerequisite from
+   * @param prerequisiteId The ID of the prerequisite course to remove
+   */
+  async removePrerequisite(
+    courseId: string,
+    prerequisiteId: string,
+  ): Promise<void> {
+    const result = await this.prerequisiteRepository.delete({
+      courseId,
+      prerequisiteId,
+    });
+
+    if (result.affected === 0) {
+      throw new NotFoundException(
+        `Prerequisite relationship not found for course ${courseId} and prerequisite ${prerequisiteId}`,
+      );
+    }
+  }
+
+  /**
+   * Get all prerequisites for a course
+   * @param courseId The course ID to get prerequisites for
+   * @returns List of prerequisite relationships with course details
+   */
+  async getPrerequisites(courseId: string): Promise<CoursePrerequisite[]> {
+    // Verify course exists
+    await this.getOneOrThrow({
+      where: { id: courseId },
+    });
+
+    return this.prerequisiteRepository.find({
+      where: { courseId },
+      relations: {
+        prerequisite: true,
+      },
+    });
+  }
+
+  /**
+   * Check if a student has met all required prerequisites for a course
+   * @param courseId The course ID to check prerequisites for
+   * @param studentId The student ID to check prerequisites satisfaction
+   * @returns Object with hasMetPrerequisites flag and details of unmet prerequisites
+   */
+  async checkPrerequisites(
+    courseId: string,
+    studentId: string,
+  ): Promise<{
+    hasMetPrerequisites: boolean;
+    unmetPrerequisites: Array<{
+      prerequisite: Course;
+      reason: string;
+    }>;
+  }> {
+    // Get all prerequisites for the course
+    const prerequisites = await this.getPrerequisites(courseId);
+    const unmetPrerequisites: Array<{
+      prerequisite: Course;
+      reason: string;
+    }> = [];
+
+    // If no prerequisites, return true
+    if (prerequisites.length === 0) {
+      return {
+        hasMetPrerequisites: true,
+        unmetPrerequisites: [],
+      };
+    }
+
+    // Check each required prerequisite
+    for (const prereq of prerequisites) {
+      // Skip non-required prerequisites
+      if (!prereq.isRequired) continue;
+
+      // Check if student has completed the prerequisite course
+      const enrollment = await this.enrollmentRepository
+        .createQueryBuilder('enrollment')
+        .innerJoin('enrollment.classRoom', 'classRoom')
+        .where('enrollment.studentId = :studentId', { studentId })
+        .andWhere('classRoom.courseId = :courseId', {
+          courseId: prereq.prerequisiteId,
+        })
+        .andWhere('enrollment.status = :status', {
+          status: EnrollmentStatus.Completed,
+        })
+        .getOne();
+
+      // If not enrolled or not completed, add to unmet prerequisites
+      if (!enrollment) {
+        unmetPrerequisites.push({
+          prerequisite: prereq.prerequisite,
+          reason: 'Course not completed',
+        });
+        continue;
+      }
+
+      // If minimum grade requirement exists, check if student meets it
+      if (prereq.minGrade && enrollment.grade) {
+        const gradeValues = {
+          [Grade.APlus]: 4.3,
+          [Grade.A]: 4.0,
+          [Grade.AMinus]: 3.7,
+          [Grade.BPlus]: 3.3,
+          [Grade.B]: 3.0,
+          [Grade.BMinus]: 2.7,
+          [Grade.CPlus]: 2.3,
+          [Grade.C]: 2.0,
+          [Grade.CMinus]: 1.7,
+          [Grade.DPlus]: 1.3,
+          [Grade.D]: 1.0,
+          [Grade.F]: 0.0,
+        };
+
+        const minGradeValue = this.getGradeValue(prereq.minGrade);
+        const studentGradeValue = gradeValues[enrollment.grade];
+
+        if (studentGradeValue < minGradeValue) {
+          unmetPrerequisites.push({
+            prerequisite: prereq.prerequisite,
+            reason: `Grade ${enrollment.grade} does not meet minimum requirement of ${prereq.minGrade}`,
+          });
+        }
+      }
+    }
+
+    return {
+      hasMetPrerequisites: unmetPrerequisites.length === 0,
+      unmetPrerequisites,
+    };
+  }
+
+  /**
+   * Convert a letter grade to its numeric value
+   * @param grade Letter grade (A, B+, etc.)
+   * @returns Numeric grade value
+   */
+  private getGradeValue(grade: string): number {
+    const gradeMap: Record<string, number> = {
+      'A+': 4.3,
+      A: 4.0,
+      'A-': 3.7,
+      'B+': 3.3,
+      B: 3.0,
+      'B-': 2.7,
+      'C+': 2.3,
+      C: 2.0,
+      'C-': 1.7,
+      'D+': 1.3,
+      D: 1.0,
+      F: 0.0,
+    };
+
+    return gradeMap[grade] || 0;
   }
 }

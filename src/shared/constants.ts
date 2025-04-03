@@ -77,3 +77,11 @@ export enum SemesterStatus {
   Upcoming = 'UPCOMING',
   Completed = 'COMPLETED',
 }
+
+export enum EnrollmentStatus {
+  Active = 'ACTIVE',
+  Dropped = 'DROPPED',
+  Completed = 'COMPLETED',
+  OnHold = 'ON_HOLD',
+  Waitlisted = 'WAITLISTED',
+}
