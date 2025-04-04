@@ -443,4 +443,16 @@ export class CoursesService extends BaseService<Course> {
 
     return gradeMap[grade] || 0;
   }
+
+  /**
+   * Verify that a course exists by ID
+   * @param id Course ID to verify
+   * @returns The course if it exists
+   * @throws NotFoundException if the course doesn't exist
+   */
+  async verifyCourseExists(id: string) {
+    return this.getOneOrThrow({
+      where: { id },
+    });
+  }
 }
