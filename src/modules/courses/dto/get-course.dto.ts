@@ -1,6 +1,13 @@
-import { ApiProperty, PartialType } from '@nestjs/swagger';
+import { ApiProperty, OmitType, PartialType } from '@nestjs/swagger';
 import { PaginationDto } from 'src/shared/dto';
-import { IsEnum, IsOptional, IsString, IsUUID } from 'class-validator';
+import {
+  IsBoolean,
+  IsEnum,
+  IsOptional,
+  IsString,
+  IsUUID,
+} from 'class-validator';
+import { Transform } from 'class-transformer';
 
 enum SortOrder {
   ASC = 'ASC',
@@ -62,4 +69,18 @@ export class GetCoursesDto extends PartialType(PaginationDto) {
     example: 'ASC',
   })
   sortOrder?: SortOrder;
+
+  @ApiProperty({
+    example: 'true',
+    description: 'Whether to include the head teacher in the response',
+    required: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  @Transform(({ value }) => value === 'true')
+  includeDepartment?: boolean;
 }
+
+export class GetCourseByDepartmentDto extends PartialType(
+  OmitType(GetCoursesDto, ['departmentId'] as const),
+) {}

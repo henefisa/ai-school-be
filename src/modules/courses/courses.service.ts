@@ -11,11 +11,10 @@ import {
   Repository,
 } from 'typeorm';
 import { CreateCourseDto } from './dto/create-course.dto';
-import { GetCoursesDto } from './dto/get-course.dto';
+import { GetCourseByDepartmentDto, GetCoursesDto } from './dto/get-course.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
 import { ExistsException } from 'src/shared/exceptions/exists.exception';
 import { ClassRoom } from 'src/typeorm/entities/class.entity';
-import { Teacher } from 'src/typeorm/entities/teacher.entity';
 import { DepartmentsService } from 'src/modules/departments/departments.service';
 import { AddPrerequisiteDto } from './dto/add-prerequisite.dto';
 import { CoursePrerequisite } from 'src/typeorm/entities/course-prerequisite.entity';
@@ -111,12 +110,15 @@ export class CoursesService extends BaseService<Course> {
       const savedCourse = await entityManager.save(Course, course);
 
       // 6. Return the created course with department relationship
-      return this.getOneOrThrow({
-        where: { id: savedCourse.id },
-        relations: {
-          department: true,
+      return this.getOneOrThrow(
+        {
+          where: { id: savedCourse.id },
+          relations: {
+            department: true,
+          },
         },
-      });
+        entityManager,
+      );
     });
   }
 
@@ -137,13 +139,7 @@ export class CoursesService extends BaseService<Course> {
 
     // Verify department exists if provided
     if (dto.departmentId) {
-      try {
-        await this.departmentsService.verifyDepartmentExists(dto.departmentId);
-      } catch {
-        throw new BadRequestException(
-          `Department with ID ${dto.departmentId} does not exist`,
-        );
-      }
+      await this.departmentsService.verifyDepartmentExists(dto.departmentId);
     }
 
     Object.assign(course, dto);
@@ -196,9 +192,11 @@ export class CoursesService extends BaseService<Course> {
     const [results, count] = await this.courseRepository.findAndCount({
       where,
       order: orderBy,
-      skip: ((dto.page || 1) - 1) * (dto.pageSize || 10),
+      skip: dto.skip,
       take: dto.pageSize || 10,
-      relations: ['department'],
+      relations: {
+        department: dto.includeDepartment,
+      },
     });
 
     return {
@@ -207,57 +205,10 @@ export class CoursesService extends BaseService<Course> {
     };
   }
 
-  async getCourseDetails(id: string) {
-    const course = await this.courseRepository.findOne({
-      where: { id },
-      relations: {
-        department: true,
-        classes: {
-          assignments: {
-            teacher: true,
-          },
-          enrollments: {
-            student: true,
-          },
-        },
-      },
-    });
-
-    if (!course) {
-      throw new BadRequestException(`Course with ID ${id} not found`);
-    }
-
-    // Transform data to make it more usable for the frontend
-    const teachers = new Map<string, Partial<Teacher>>();
-    let enrolledStudentsCount = 0;
-
-    for (const classItem of course.classes) {
-      // Count enrollments
-      enrolledStudentsCount += classItem.enrollments?.length || 0;
-
-      // Collect unique teachers
-      for (const assignment of classItem.assignments || []) {
-        if (assignment.teacher) {
-          teachers.set(assignment.teacher.id, {
-            id: assignment.teacher.id,
-            firstName: assignment.teacher.firstName,
-            lastName: assignment.teacher.lastName,
-            email: assignment.teacher.email,
-          });
-        }
-      }
-    }
-
-    return {
-      ...course,
-      teachersCount: teachers.size,
-      teachers: Array.from(teachers.values()),
-      enrolledStudentsCount,
-      // Include other calculated fields as needed
-    };
-  }
-
-  async getDepartmentCourses(departmentId: string, dto: GetCoursesDto) {
+  async getDepartmentCourses(
+    departmentId: string,
+    dto: GetCourseByDepartmentDto,
+  ) {
     await this.departmentsService.verifyDepartmentExists(departmentId);
 
     const where: FindOptionsWhere<Course> = { departmentId };

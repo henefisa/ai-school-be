@@ -17,7 +17,7 @@ import {
 } from '@nestjs/swagger';
 import { CoursesService } from './courses.service';
 import { CreateCourseDto } from './dto/create-course.dto';
-import { GetCoursesDto } from './dto/get-course.dto';
+import { GetCourseByDepartmentDto, GetCoursesDto } from './dto/get-course.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
 import { JwtAuthGuard } from 'src/shared/guards/jwt-auth.guard';
 import { RolesGuard } from 'src/shared/guards/roles.guard';
@@ -70,22 +70,6 @@ export class CoursesController {
     return this.coursesService.getOneOrThrow({ where: { id } });
   }
 
-  @Get(':id/details')
-  @ApiOperation({
-    summary: 'Get course details including teachers and enrollment statistics',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Returns detailed course information.',
-  })
-  @ApiResponse({
-    status: 404,
-    description: 'Course not found.',
-  })
-  async getCourseDetails(@Param('id') id: string) {
-    return this.coursesService.getCourseDetails(id);
-  }
-
   @Get('department/:departmentId')
   @ApiOperation({ summary: 'Get courses by department ID' })
   @ApiResponse({
@@ -98,7 +82,7 @@ export class CoursesController {
   })
   async getCoursesByDepartment(
     @Param('departmentId') departmentId: string,
-    @Query() dto: GetCoursesDto,
+    @Query() dto: GetCourseByDepartmentDto,
   ) {
     return this.coursesService.getDepartmentCourses(departmentId, dto);
   }
