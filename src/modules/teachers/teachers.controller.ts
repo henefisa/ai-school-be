@@ -18,6 +18,7 @@ import { TeachersService } from './teachers.service';
 import { CreateTeacherDto } from './dto/create-teacher.dto';
 import { GetTeachersDto } from './dto/get-teachers.dto';
 import { UpdateTeacherDto } from './dto/update-teacher.dto';
+import { GetTeacherDto } from './dto/get-teacher.dto';
 
 @Controller('teachers')
 @UseGuards(JwtAuthGuard)
@@ -46,8 +47,8 @@ export class TeachersController {
   }
 
   @Get(':id')
-  async getTeacherById(@Param('id') id: string) {
-    return this.teacherService.getTeacherById(id);
+  async getTeacherById(@Param('id') id: string, @Query() dto: GetTeacherDto) {
+    return this.teacherService.getTeacherById(id, dto);
   }
 
   @Patch(':id')

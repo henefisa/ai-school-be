@@ -22,6 +22,7 @@ import { StudentAddress } from 'src/typeorm/entities/student-address.entity';
 import { Address } from 'src/typeorm/entities/address.entity';
 import { ParentAddress } from 'src/typeorm/entities/parent-address.entity';
 import { User } from 'src/typeorm/entities/user.entity';
+import { GetTeacherDto } from './dto/get-teacher.dto';
 @Injectable()
 export class TeachersService extends BaseService<Teacher> {
   constructor(
@@ -300,14 +301,17 @@ export class TeachersService extends BaseService<Teacher> {
    * @param id Teacher ID to retrieve
    * @returns Teacher object with related addresses
    */
-  async getTeacherById(id: string): Promise<Teacher> {
+  async getTeacherById(id: string, dto: GetTeacherDto): Promise<Teacher> {
     return this.getOneOrThrow({
       where: { id },
       relations: {
-        teacherAddresses: {
-          address: true,
-        },
-        user: true,
+        departments: dto.includeDepartments,
+        teacherAddresses: dto.includeTeacherAddresses
+          ? {
+              address: true,
+            }
+          : undefined,
+        user: dto.includeUser,
       },
     });
   }
