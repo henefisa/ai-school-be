@@ -269,6 +269,11 @@ export class TeachersService extends BaseService<Teacher> {
       .skip(dto.skip)
       .take(dto.pageSize ?? 10);
 
+    // Conditionally join departments based on includedDepartments parameter
+    if (dto.includedDepartments) {
+      queryBuilder.leftJoinAndSelect('teacher.departments', 'departments');
+    }
+
     if (dto.q) {
       queryBuilder.andWhere(
         '(LOWER(teacher.firstName) LIKE LOWER(:query) OR LOWER(teacher.lastName) LIKE LOWER(:query))',
