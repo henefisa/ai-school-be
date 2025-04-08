@@ -11,7 +11,10 @@ import {
   Repository,
 } from 'typeorm';
 import { CreateCourseDto } from './dto/create-course.dto';
-import { GetCourseByDepartmentDto, GetCoursesDto } from './dto/get-course.dto';
+import {
+  GetCoursesByDepartmentDto,
+  GetCoursesDto,
+} from './dto/get-courses.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
 import { ExistsException } from 'src/shared/exceptions/exists.exception';
 import { ClassRoom } from 'src/typeorm/entities/class.entity';
@@ -21,6 +24,7 @@ import { CoursePrerequisite } from 'src/typeorm/entities/course-prerequisite.ent
 import { NotFoundException } from '@nestjs/common';
 import { EnrollmentStatus, Grade } from 'src/shared/constants';
 import { Enrollment } from 'src/typeorm/entities/enrollment.entity';
+import { GetCourseDto } from './dto/get-course.dto';
 
 @Injectable()
 export class CoursesService extends BaseService<Course> {
@@ -207,7 +211,7 @@ export class CoursesService extends BaseService<Course> {
 
   async getDepartmentCourses(
     departmentId: string,
-    dto: GetCourseByDepartmentDto,
+    dto: GetCoursesByDepartmentDto,
   ) {
     await this.departmentsService.verifyDepartmentExists(departmentId);
 
@@ -453,6 +457,17 @@ export class CoursesService extends BaseService<Course> {
   async verifyCourseExists(id: string) {
     return this.getOneOrThrow({
       where: { id },
+    });
+  }
+
+  async getCourseById(id: string, dto: GetCourseDto) {
+    return this.getOneOrThrow({
+      where: {
+        id,
+      },
+      relations: {
+        department: dto.includeDepartment,
+      },
     });
   }
 }

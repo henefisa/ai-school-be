@@ -17,7 +17,11 @@ import {
 } from '@nestjs/swagger';
 import { CoursesService } from './courses.service';
 import { CreateCourseDto } from './dto/create-course.dto';
-import { GetCourseByDepartmentDto, GetCoursesDto } from './dto/get-course.dto';
+import {
+  GetCoursesByDepartmentDto,
+  GetCoursesDto,
+} from './dto/get-courses.dto';
+import { GetCourseDto } from './dto/get-course.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
 import { JwtAuthGuard } from 'src/shared/guards/jwt-auth.guard';
 import { RolesGuard } from 'src/shared/guards/roles.guard';
@@ -66,8 +70,8 @@ export class CoursesController {
     status: 404,
     description: 'Course not found.',
   })
-  async getCourseById(@Param('id') id: string) {
-    return this.coursesService.getOneOrThrow({ where: { id } });
+  async getCourseById(@Param('id') id: string, @Query() dto: GetCourseDto) {
+    return this.coursesService.getCourseById(id, dto);
   }
 
   @Get('department/:departmentId')
@@ -82,7 +86,7 @@ export class CoursesController {
   })
   async getCoursesByDepartment(
     @Param('departmentId') departmentId: string,
-    @Query() dto: GetCourseByDepartmentDto,
+    @Query() dto: GetCoursesByDepartmentDto,
   ) {
     return this.coursesService.getDepartmentCourses(departmentId, dto);
   }

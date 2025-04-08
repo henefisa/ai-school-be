@@ -3,7 +3,7 @@ import { CoursesController } from './courses.controller';
 import { CoursesService } from './courses.service';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
-import { GetCoursesDto } from './dto/get-course.dto';
+import { GetCoursesDto } from './dto/get-courses.dto';
 
 describe('CoursesController', () => {
   let controller: CoursesController;
