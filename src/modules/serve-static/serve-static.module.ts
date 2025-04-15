@@ -7,60 +7,59 @@ import { FileStorageService } from '../../shared/services/file-storage.service';
 import { STATIC_FILE_CACHE_DURATION } from './serve-static.constants';
 
 /**
- * Module for serving static files from upload directories
+ * Module for serving static files from upload directories.
  *
- * This module configures NestJS to serve static files from specified upload directories.
- * It also ensures that the directories exist, creating them if necessary.
+ * This module configures NestJS to serve static files from specified upload directories
+ * and ensures these directories exist upon initialization.
  */
 @Module({
   imports: [
     // Configure ServeStaticModule for each upload directory
+    // Dynamically configure NestServeStaticModule for each upload directory
     ...uploadDirectories
       .map(
         (directory): ServeStaticModuleOptions => ({
           rootPath: join(process.cwd(), directory.path),
           serveRoot: directory.route,
           serveStaticOptions: {
-            index: false, // Don't serve index files
-            fallthrough: true, // Continue to the next middleware if file not found
-            maxAge: STATIC_FILE_CACHE_DURATION,
+            index: false, // Do not serve index files by default
+            fallthrough: true, // Allow other routes to handle if file not found
+            maxAge: STATIC_FILE_CACHE_DURATION, // Set cache duration
           },
         }),
       )
       .map((options) => NestServeStaticModule.forRoot(options)),
+    // NOTE: Import SharedModule or ensure FileStorageService is globally available
+    // Example: SharedModule,
   ],
-  providers: [FileStorageService],
-  exports: [FileStorageService],
+  // FileStorageService is no longer provided or exported here
+  // providers: [FileStorageService],
+  // exports: [FileStorageService],
 })
 export class ServeStaticModule implements OnModuleInit {
   private readonly logger = new Logger(ServeStaticModule.name);
 
+  // Inject FileStorageService (assuming it's available via DI)
   constructor(private readonly fileStorageService: FileStorageService) {}
-
   /**
-   * Lifecycle hook that runs when the module is initialized
-   * Creates the upload directories if they don't exist
+   * Lifecycle hook called once the module has been initialized.
+   * Ensures that all configured upload directories exist.
    */
-  onModuleInit(): void {
-    this.createUploadDirectories();
+  public onModuleInit(): void {
+    this.ensureUploadDirectoriesExist();
   }
 
   /**
-   * Creates all configured upload directories if they don't exist
+  /**
+   * Iterates through configured upload directories and ensures each one exists.
+   * Relies on FileStorageService to handle the creation and logging.
    */
-  private createUploadDirectories(): void {
+  private ensureUploadDirectoriesExist(): void {
+    this.logger.log('Ensuring all upload directories exist...');
     uploadDirectories.forEach((directory) => {
-      const result = this.fileStorageService.ensureDirectoryExists(
-        directory.path,
-      );
-
-      if (result.success) {
-        this.logger.log(`Ensured upload directory exists: ${directory.path}`);
-      } else {
-        this.logger.error(
-          `Failed to ensure upload directory: ${directory.path}. Error: ${result.error}`,
-        );
-      }
+      // Let FileStorageService handle the logic and potential errors/logging
+      this.fileStorageService.ensureDirectoryExists(directory.path);
     });
+    this.logger.log('Finished checking upload directories.');
   }
 }
