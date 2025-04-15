@@ -9,11 +9,11 @@ import { User } from 'src/typeorm/entities/user.entity';
 import { EntityManager, FindManyOptions, Repository } from 'typeorm';
 import { GetUsersDto } from './dto/get-users.dto';
 import { BaseService } from 'src/shared/base.service';
-import { EntityName, ERROR_MESSAGES } from 'src/shared/error-messages';
+import { EntityName } from 'src/shared/error-messages'; // ERROR_MESSAGES removed as it's unused after refactor
 import { CreateUserDto } from './dto/create-users.dto';
 import { ExistsException } from 'src/shared/exceptions/exists.exception';
 import { FileStorageService } from '../serve-static/file-storage.service';
-import * as path from 'path';
+// import * as path from 'path'; // No longer needed after removing URL parsing
 import { uploadDirectories } from '../serve-static/serve-static.config';
 
 @Injectable()
@@ -172,17 +172,7 @@ export class UsersService extends BaseService<User> {
       throw new BadRequestException('Avatar file is required.');
     }
 
-    // --- File Validation (already handled by ParseFilePipe in controller, but good practice) ---
-    // Example: Check file type and size again if needed, though pipes are preferred
-    // const maxFileSize = 2 * 1024 * 1024; // 2MB
-    // const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif'];
-    // if (file.size > maxFileSize) {
-    //   throw new BadRequestException(`File size exceeds the limit of ${maxFileSize / 1024 / 1024}MB.`);
-    // }
-    // if (!allowedMimeTypes.includes(file.mimetype)) {
-    //   throw new BadRequestException(`Invalid file type. Only ${allowedMimeTypes.join(', ')} are allowed.`);
-    // }
-    // --- End File Validation ---
+    // File validation (type, size) is handled by ParseFilePipe in the controller.
 
     const avatarConfig = uploadDirectories.find((dir) =>
       dir.path.includes('avatars'),
@@ -196,72 +186,82 @@ export class UsersService extends BaseService<User> {
     const uploadDirectory = avatarConfig.path;
     const serveRoute = avatarConfig.route;
 
-    // Generate a unique filename (e.g., userId-timestamp.ext)
-    const timestamp = Date.now();
-    const extension = path.extname(file.originalname);
-    const filename = `${userId}-${timestamp}${extension}`;
-
-    // 1. Delete old avatar if exists
-    if (user.photoUrl) {
-      try {
-        // Extract filename from URL (assuming URL format /uploads/avatars/filename.ext)
-        const oldFilename = path.basename(
-          new URL(user.photoUrl, 'http://dummy.base').pathname,
-        );
-        if (oldFilename) {
-          const deleteResult = this.fileStorageService.deleteFile(
-            oldFilename,
-            uploadDirectory,
-          );
-          if (
-            !deleteResult.success &&
-            deleteResult.error !== `File does not exist: ${deleteResult.path}`
-          ) {
-            // Log error but don't necessarily stop the process
-            this.logger.warn(
-              `Failed to delete old avatar ${oldFilename}: ${deleteResult.error}`,
-            );
-          }
-        }
-      } catch (error) {
-        this.logger.warn(
-          `Error processing old avatar URL ${user.photoUrl} for deletion: ${error instanceof Error ? error.message : error}`,
-        );
-      }
+    // --- Delete Old Avatar (Best Effort) ---
+    const oldPhotoUrl = user.photoUrl; // Store before potentially overwriting
+    if (oldPhotoUrl) {
+      this.logger.log(`Attempting to delete old avatar: ${oldPhotoUrl}`);
+      this._deleteUploadedFile(oldPhotoUrl, uploadDirectory);
     }
 
-    // 2. Save the new avatar
-    const saveResult = this.fileStorageService.saveFile(
-      file.buffer,
-      filename,
-      uploadDirectory,
-    );
-
-    if (!saveResult.success) {
-      this.logger.error(`Failed to save avatar: ${saveResult.error}`);
-      throw new InternalServerErrorException('Failed to save avatar file.');
-    }
-
-    // 3. Generate the URL for the saved file
-    // Assuming file is served directly from the route defined in serve-static.config
-    // Construct URL relative to the server root
-    const photoUrl = `${serveRoute}/${filename}`.replace(/\/+/g, '/');
-
-    // 4. Update user entity
-    user.photoUrl = photoUrl;
-
-    try {
-      await this.userRepository.save(user);
-      this.logger.log(`Updated avatar for user ${userId}`);
-      return user;
-    } catch (error) {
-      // If saving user fails, try to delete the newly uploaded file
-      this.fileStorageService.deleteFile(filename, uploadDirectory);
+    if (!file.filename) {
       this.logger.error(
-        `Failed to update user ${userId} after saving avatar: ${error instanceof Error ? error.message : error}`,
+        'Multer did not provide a filename. Cannot proceed with avatar update.',
+        file,
       );
       throw new InternalServerErrorException(
-        ERROR_MESSAGES.badRequest(EntityName.User), // Use badRequest for general update failure
+        'File processing failed: filename missing.',
+      );
+    }
+    const newFilename = file.filename;
+    let savedFilename: string | undefined;
+
+    try {
+      // 1. File is assumed to be saved by Multer. Mark it for potential cleanup.
+      savedFilename = newFilename;
+
+      // 2. Generate the URL using the filename from Multer
+      const photoUrl = `${serveRoute}/${newFilename}`.replace(/\/+/g, '/');
+
+      // 3. Update user entity in DB
+      user.photoUrl = photoUrl;
+      await this.userRepository.save(user);
+      this.logger.log(`Updated avatar for user ${userId} to ${photoUrl}`);
+
+      // 4. Success: Prevent cleanup
+      savedFilename = undefined;
+
+      return user;
+    } catch (error) {
+      // If any error occurred after file was saved, attempt cleanup
+      if (savedFilename) {
+        this.logger.warn(
+          `Rolling back avatar upload for user ${userId} due to error. Deleting file: ${savedFilename}`,
+        );
+        this._deleteUploadedFile(savedFilename, uploadDirectory);
+      }
+
+      // Log and re-throw the original error (or a more specific one if needed)
+      this.logger.error(
+        `Failed to update avatar for user ${userId}: ${error instanceof Error ? error.message : error}`,
+      );
+      // Re-throw the original error or a generic internal server error
+      if (
+        error instanceof InternalServerErrorException ||
+        error instanceof BadRequestException
+      ) {
+        throw error;
+      }
+      // Throw a generic internal error for unexpected issues (e.g., DB connection)
+      throw new InternalServerErrorException(
+        'An unexpected error occurred while updating the avatar.',
+      );
+    }
+  }
+
+  /**
+   * Private helper to delete an uploaded file, logging warnings on failure.
+   * @param filename - The name of the file to delete.
+   * @param directory - The directory containing the file.
+   */
+  private _deleteUploadedFile(filename: string, directory: string): void {
+    const result = this.fileStorageService.deleteFile(filename, directory);
+    // Log warnings for cleanup failures, but don't throw an error
+    if (
+      !result.success &&
+      result.error !== `File does not exist: ${result.path}` // Ignore "file not found" during cleanup
+    ) {
+      this.logger.warn(
+        `Failed to delete uploaded file ${filename} from ${directory}: ${result.error}`,
       );
     }
   }

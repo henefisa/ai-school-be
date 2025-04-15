@@ -148,48 +148,4 @@ export class FileStorageService {
       };
     }
   }
-
-  /**
-   * Saves a file to the specified directory
-   *
-   * @param file - The file buffer to save
-   * @param filename - The name to save the file as
-   * @param directory - The directory to save the file in
-   * @returns Result object with success status and error message if applicable
-   */
-  public saveFile(
-    file: Buffer,
-    filename: string,
-    directory: string,
-  ): FileOperationResult {
-    try {
-      const dirResult = this.ensureDirectoryExists(directory);
-
-      if (!dirResult.success) {
-        return dirResult;
-      }
-
-      const filePath = path.join(process.cwd(), directory, filename);
-      fs.writeFileSync(filePath, file);
-      this.logger.log(`Saved file: ${filePath}`);
-
-      return {
-        success: true,
-        path: filePath,
-      };
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error';
-      this.logger.error(
-        `Error saving file: ${filename} to ${directory}`,
-        error instanceof Error ? error.stack : undefined,
-      );
-
-      return {
-        success: false,
-        error: errorMessage,
-        path: path.join(process.cwd(), directory, filename),
-      };
-    }
-  }
 }
