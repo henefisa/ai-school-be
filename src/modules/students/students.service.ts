@@ -26,6 +26,7 @@ import { Attendance } from 'src/typeorm/entities/attendance.entity';
 import { Grade } from 'src/typeorm/entities/grade.entity';
 import { Enrollment } from 'src/typeorm/entities/enrollment.entity';
 import { FileStorageService } from '../../shared/services/file-storage.service';
+import { GetStudentDto } from './dto/get-student.dto';
 
 @Injectable()
 export class StudentsService extends BaseService<Student> {
@@ -403,5 +404,16 @@ export class StudentsService extends BaseService<Student> {
       .leftJoinAndSelect('student.user', 'user')
       .where('student.parent_id = :parentId', { parentId })
       .getMany();
+  }
+
+  async getStudentById(id: string, dto: GetStudentDto) {
+    return this.getOneOrThrow({
+      where: { id },
+      relations: {
+        user: dto.includeUser,
+        parent: dto.includeParent,
+        studentAddresses: dto.includeAddresses ? { address: true } : undefined,
+      },
+    });
   }
 }

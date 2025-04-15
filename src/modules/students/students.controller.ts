@@ -32,6 +32,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { Roles } from 'src/shared/decorators/roles.decorator';
 import { Role } from 'src/shared/constants';
 import { Request } from 'express';
+import { GetStudentDto } from './dto/get-student.dto';
 
 @ApiTags('students')
 @ApiBearerAuth()
@@ -74,14 +75,8 @@ export class StudentsController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Get a student by id' })
-  async getStudentById(@Param('id') id: string) {
-    return this.studentService.getOneOrThrow({
-      where: { id },
-      relations: {
-        user: true,
-        studentAddresses: true,
-      },
-    });
+  async getStudentById(@Param('id') id: string, @Query() dto: GetStudentDto) {
+    return this.studentService.getStudentById(id, dto);
   }
 
   @Patch(':id')
