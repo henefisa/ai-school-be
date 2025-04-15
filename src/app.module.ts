@@ -40,6 +40,7 @@ import { SemestersModule } from './modules/semesters/semesters.module';
 import { RoomsModule } from './modules/rooms/rooms.module';
 import { ParentsModule } from './modules/parents/parents.module';
 import { AddressesModule } from './modules/addresses/addresses.module';
+import { ServeStaticModule } from './modules/serve-static/serve-static.module';
 
 @Module({
   imports: [
@@ -93,6 +94,7 @@ import { AddressesModule } from './modules/addresses/addresses.module';
     SemestersModule,
     ParentsModule,
     AddressesModule,
+    ServeStaticModule,
   ],
   controllers: [AppController],
   providers: [AppService],

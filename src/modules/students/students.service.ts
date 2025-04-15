@@ -3,6 +3,7 @@ import {
   NotFoundException,
   ForbiddenException,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Student } from 'src/typeorm/entities/student.entity';
@@ -18,22 +19,25 @@ import { Address } from 'src/typeorm/entities/address.entity';
 import { StudentAddress } from 'src/typeorm/entities/student-address.entity';
 import { groupStudentFormData } from 'src/shared/utils/form-data.utils';
 import { ParentsService } from '../parents/parents.service';
-import * as fs from 'fs';
-import * as path from 'path';
 import { User } from 'src/typeorm/entities/user.entity';
 import { Not, In } from 'typeorm';
 import { ParentAddress } from 'src/typeorm/entities/parent-address.entity';
 import { Attendance } from 'src/typeorm/entities/attendance.entity';
 import { Grade } from 'src/typeorm/entities/grade.entity';
 import { Enrollment } from 'src/typeorm/entities/enrollment.entity';
+import { FileStorageService } from '../../shared/services/file-storage.service';
 
 @Injectable()
 export class StudentsService extends BaseService<Student> {
+  private readonly logger = new Logger(StudentsService.name);
+  private readonly uploadsDirectory = 'uploads/students';
+
   constructor(
     @InjectRepository(Student)
     private readonly studentRepository: Repository<Student>,
     private readonly parentsService: ParentsService,
     private readonly usersService: UsersService,
+    private readonly fileStorageService: FileStorageService,
   ) {
     super(EntityName.Student, studentRepository);
   }
@@ -136,29 +140,27 @@ export class StudentsService extends BaseService<Student> {
 
   /**
    * Deletes an uploaded file from the filesystem
+   * @param filename - The name of the file to delete
    */
   private deleteUploadedFile(filename: string): void {
-    try {
-      const filePath = path.join(process.cwd(), 'uploads/students', filename);
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-      }
-    } catch (error) {
-      // Log the error but don't throw - this is cleanup code
-      console.error('Error deleting uploaded file:', error);
+    const result = this.fileStorageService.deleteFile(
+      filename,
+      this.uploadsDirectory,
+    );
+    if (!result.success) {
+      this.logger.warn(`Failed to delete file ${filename}: ${result.error}`);
     }
   }
 
+  /**
+   * Gets the URL for an uploaded photo
+   * @param file - The uploaded file object
+   * @returns The URL for the file or undefined if the file is invalid
+   */
   private getPhotoUrl(file?: Express.Multer.File): string | undefined {
-    if (!file) {
-      return undefined;
-    }
-
-    if (typeof file === 'object' && file !== null && 'filename' in file) {
-      return `/uploads/students/${file.filename}`;
-    }
-
-    return undefined;
+    return this.fileStorageService.getFileUrl(file, {
+      basePath: '/uploads/students',
+    });
   }
 
   async update(id: string, dto: UpdateStudentDto) {

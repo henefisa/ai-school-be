@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Teacher } from 'src/typeorm/entities/teacher.entity';
 import { Repository } from 'typeorm';
@@ -13,8 +13,6 @@ import { DepartmentsService } from '../departments/departments.service';
 import { AddressesService } from '../addresses/addresses.service';
 import { CreateAddressDto } from '../addresses/dto/create-address.dto';
 import { groupTeacherFormData } from 'src/shared/utils/form-data.utils';
-import * as fs from 'fs';
-import * as path from 'path';
 import { ClassAssignment } from 'src/typeorm/entities/class-assignment.entity';
 import { Department } from 'src/typeorm/entities/department.entity';
 import { TeacherAddress } from 'src/typeorm/entities/teacher-address.entity';
@@ -23,14 +21,19 @@ import { Address } from 'src/typeorm/entities/address.entity';
 import { ParentAddress } from 'src/typeorm/entities/parent-address.entity';
 import { User } from 'src/typeorm/entities/user.entity';
 import { GetTeacherDto } from './dto/get-teacher.dto';
+import { FileStorageService } from '../../shared/services/file-storage.service';
 @Injectable()
 export class TeachersService extends BaseService<Teacher> {
+  private readonly logger = new Logger(TeachersService.name);
+  private readonly uploadsDirectory = 'uploads/teachers';
+
   constructor(
     @InjectRepository(Teacher)
     private readonly teacherRepository: Repository<Teacher>,
     private readonly usersService: UsersService,
     private readonly departmentsService: DepartmentsService,
     private readonly addressesService: AddressesService,
+    private readonly fileStorageService: FileStorageService,
   ) {
     super(EntityName.Teacher, teacherRepository);
   }
@@ -57,17 +60,8 @@ export class TeachersService extends BaseService<Teacher> {
         hireDate: new Date(groupedData.professional.joinDate),
       };
 
-      // Handle photo data
-      if (groupedData.personal.photo) {
-        const photoFile = groupedData.personal.photo as unknown as {
-          filename?: string;
-        };
-
-        if (photoFile && photoFile.filename) {
-          // Store the filename in a custom field or metadata if needed
-          // Note: Teacher entity doesn't have a photo field by default
-        }
-      }
+      // Get photo URL if a photo was uploaded
+      const photoUrl = this.getPhotoUrl(dto['personal.photo']);
 
       // Verify department exists if departmentId is provided
       if (teacherData.departmentId) {
@@ -88,6 +82,7 @@ export class TeachersService extends BaseService<Teacher> {
           teacherId: createdTeacher.id,
           password: groupedData.personal.password,
           role: Role.Teacher,
+          photoUrl: photoUrl,
         },
         entityManager,
       );
@@ -191,20 +186,14 @@ export class TeachersService extends BaseService<Teacher> {
       if (teacher.user?.photoUrl) {
         const filename = teacher.user.photoUrl.split('/').pop();
         if (filename) {
-          try {
-            // Delete the file from the uploads directory
-            const filePath = path.join(
-              process.cwd(),
-              'uploads/teachers',
-              filename,
+          const result = this.fileStorageService.deleteFile(
+            filename,
+            this.uploadsDirectory,
+          );
+          if (!result.success) {
+            this.logger.warn(
+              `Failed to delete file ${filename}: ${result.error}`,
             );
-
-            if (fs.existsSync(filePath)) {
-              fs.unlinkSync(filePath);
-            }
-          } catch (error: unknown) {
-            // Log error but continue with deletion
-            console.error('Failed to delete teacher photo:', error);
           }
         }
       }
@@ -313,6 +302,17 @@ export class TeachersService extends BaseService<Teacher> {
           : undefined,
         user: dto.includeUser,
       },
+    });
+  }
+
+  /**
+   * Gets the URL for an uploaded photo
+   * @param file - The uploaded file object
+   * @returns The URL for the file or undefined if the file is invalid
+   */
+  private getPhotoUrl(file?: Express.Multer.File): string | undefined {
+    return this.fileStorageService.getFileUrl(file, {
+      basePath: '/uploads/teachers',
     });
   }
 }

@@ -8,22 +8,23 @@ import { MulterModule } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { nanoid } from 'nanoid';
 import * as path from 'path';
-import * as fs from 'fs';
 import { Parent } from 'src/typeorm/entities/parent.entity';
 import { Address } from 'src/typeorm/entities/address.entity';
 import { StudentAddress } from 'src/typeorm/entities/student-address.entity';
 import { ParentsModule } from '../parents/parents.module';
-// Create uploads directory if it doesn't exist
+import { ServeStaticModule } from '../serve-static/serve-static.module';
+import { FileStorageService } from '../../shared/services/file-storage.service';
+import { DEFAULT_MAX_FILE_SIZE } from '../serve-static/serve-static.constants';
+
+// Define the uploads directory path
 const uploadsDir = path.join(process.cwd(), 'uploads/students');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Student, Parent, Address, StudentAddress]),
     UsersModule,
     ParentsModule,
+    ServeStaticModule,
     MulterModule.register({
       storage: diskStorage({
         destination: (
@@ -55,12 +56,12 @@ if (!fs.existsSync(uploadsDir)) {
         callback(null, true);
       },
       limits: {
-        fileSize: 5 * 1024 * 1024, // 5MB
+        fileSize: DEFAULT_MAX_FILE_SIZE,
       },
     }),
   ],
   controllers: [StudentsController],
-  providers: [StudentsService],
+  providers: [StudentsService, FileStorageService],
   exports: [StudentsService],
 })
 export class StudentsModule {}
