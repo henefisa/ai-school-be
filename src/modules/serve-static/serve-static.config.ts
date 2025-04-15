@@ -26,4 +26,9 @@ export const uploadDirectories: UploadDirectoryConfig[] = [
     description: 'Teacher profile photos and documents',
   },
   // Add more upload directories as needed
+  {
+    path: 'uploads/avatars',
+    route: '/uploads/avatars',
+    description: 'User profile avatars',
+  },
 ];

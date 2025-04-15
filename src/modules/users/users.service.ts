@@ -1,18 +1,29 @@
-import { Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from 'src/typeorm/entities/user.entity';
 import { EntityManager, FindManyOptions, Repository } from 'typeorm';
 import { GetUsersDto } from './dto/get-users.dto';
 import { BaseService } from 'src/shared/base.service';
-import { EntityName } from 'src/shared/error-messages';
+import { EntityName, ERROR_MESSAGES } from 'src/shared/error-messages';
 import { CreateUserDto } from './dto/create-users.dto';
 import { ExistsException } from 'src/shared/exceptions/exists.exception';
+import { FileStorageService } from '../serve-static/file-storage.service';
+import * as path from 'path';
+import { uploadDirectories } from '../serve-static/serve-static.config';
 
 @Injectable()
 export class UsersService extends BaseService<User> {
+  private readonly logger: Logger = new Logger(UsersService.name);
+
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    private readonly fileStorageService: FileStorageService,
   ) {
     super(EntityName.User, userRepository);
   }
@@ -146,5 +157,112 @@ export class UsersService extends BaseService<User> {
     // Save using either provided entity manager or repository
     const manager = this.getRepository(entityManager);
     return manager.save(user);
+  }
+
+  /**
+   * Updates the avatar for a specific user.
+   * @param userId - The ID of the user to update.
+   * @param file - The uploaded avatar file.
+   * @returns The updated User entity.
+   */
+  async updateAvatar(userId: string, file: Express.Multer.File): Promise<User> {
+    const user = await this.getOneOrThrow({ where: { id: userId } });
+
+    if (!file) {
+      throw new BadRequestException('Avatar file is required.');
+    }
+
+    // --- File Validation (already handled by ParseFilePipe in controller, but good practice) ---
+    // Example: Check file type and size again if needed, though pipes are preferred
+    // const maxFileSize = 2 * 1024 * 1024; // 2MB
+    // const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif'];
+    // if (file.size > maxFileSize) {
+    //   throw new BadRequestException(`File size exceeds the limit of ${maxFileSize / 1024 / 1024}MB.`);
+    // }
+    // if (!allowedMimeTypes.includes(file.mimetype)) {
+    //   throw new BadRequestException(`Invalid file type. Only ${allowedMimeTypes.join(', ')} are allowed.`);
+    // }
+    // --- End File Validation ---
+
+    const avatarConfig = uploadDirectories.find((dir) =>
+      dir.path.includes('avatars'),
+    );
+    if (!avatarConfig) {
+      this.logger.error('Avatar upload directory configuration not found.');
+      throw new InternalServerErrorException(
+        'Server configuration error for avatars.',
+      );
+    }
+    const uploadDirectory = avatarConfig.path;
+    const serveRoute = avatarConfig.route;
+
+    // Generate a unique filename (e.g., userId-timestamp.ext)
+    const timestamp = Date.now();
+    const extension = path.extname(file.originalname);
+    const filename = `${userId}-${timestamp}${extension}`;
+
+    // 1. Delete old avatar if exists
+    if (user.photoUrl) {
+      try {
+        // Extract filename from URL (assuming URL format /uploads/avatars/filename.ext)
+        const oldFilename = path.basename(
+          new URL(user.photoUrl, 'http://dummy.base').pathname,
+        );
+        if (oldFilename) {
+          const deleteResult = this.fileStorageService.deleteFile(
+            oldFilename,
+            uploadDirectory,
+          );
+          if (
+            !deleteResult.success &&
+            deleteResult.error !== `File does not exist: ${deleteResult.path}`
+          ) {
+            // Log error but don't necessarily stop the process
+            this.logger.warn(
+              `Failed to delete old avatar ${oldFilename}: ${deleteResult.error}`,
+            );
+          }
+        }
+      } catch (error) {
+        this.logger.warn(
+          `Error processing old avatar URL ${user.photoUrl} for deletion: ${error instanceof Error ? error.message : error}`,
+        );
+      }
+    }
+
+    // 2. Save the new avatar
+    const saveResult = this.fileStorageService.saveFile(
+      file.buffer,
+      filename,
+      uploadDirectory,
+    );
+
+    if (!saveResult.success) {
+      this.logger.error(`Failed to save avatar: ${saveResult.error}`);
+      throw new InternalServerErrorException('Failed to save avatar file.');
+    }
+
+    // 3. Generate the URL for the saved file
+    // Assuming file is served directly from the route defined in serve-static.config
+    // Construct URL relative to the server root
+    const photoUrl = `${serveRoute}/${filename}`.replace(/\/+/g, '/');
+
+    // 4. Update user entity
+    user.photoUrl = photoUrl;
+
+    try {
+      await this.userRepository.save(user);
+      this.logger.log(`Updated avatar for user ${userId}`);
+      return user;
+    } catch (error) {
+      // If saving user fails, try to delete the newly uploaded file
+      this.fileStorageService.deleteFile(filename, uploadDirectory);
+      this.logger.error(
+        `Failed to update user ${userId} after saving avatar: ${error instanceof Error ? error.message : error}`,
+      );
+      throw new InternalServerErrorException(
+        ERROR_MESSAGES.badRequest(EntityName.User), // Use badRequest for general update failure
+      );
+    }
   }
 }

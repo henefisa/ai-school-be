@@ -3,40 +3,54 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from 'src/typeorm/entities/user.entity';
 import { UsersService } from './users.service';
 import { UsersController } from './users.controller';
-import { Student } from 'src/typeorm/entities/student.entity';
-import { Parent } from 'src/typeorm/entities/parent.entity';
-import { Teacher } from 'src/typeorm/entities/teacher.entity';
-import { Department } from 'src/typeorm/entities/department.entity';
-import { ParentAddress } from 'src/typeorm/entities/parent-address.entity';
-import { Course } from 'src/typeorm/entities/course.entity';
-import { Address } from 'src/typeorm/entities/address.entity';
-import { StudentAddress } from 'src/typeorm/entities/student-address.entity';
-import { Enrollment } from 'src/typeorm/entities/enrollment.entity';
-import { Semester } from 'src/typeorm/entities/semester.entity';
-import { ClassRoom } from 'src/typeorm/entities/class.entity';
-import { ClassAssignment } from 'src/typeorm/entities/class-assignment.entity';
-import { Grade } from 'src/typeorm/entities/grade.entity';
-import { Attendance } from 'src/typeorm/entities/attendance.entity';
+import { ServeStaticModule } from '../serve-static/serve-static.module';
+import { MulterModule } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { nanoid } from 'nanoid';
+import * as path from 'path';
+import { DEFAULT_MAX_FILE_SIZE } from '../serve-static/serve-static.constants';
+
+const uploadsDir = path.join(process.cwd(), 'uploads/users');
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([
-      User,
-      Student,
-      Parent,
-      Teacher,
-      Department,
-      ParentAddress,
-      Course,
-      Address,
-      StudentAddress,
-      Enrollment,
-      Semester,
-      ClassRoom,
-      ClassAssignment,
-      Grade,
-      Attendance,
-    ]),
+    TypeOrmModule.forFeature([User]),
+    ServeStaticModule,
+    MulterModule.register({
+      storage: diskStorage({
+        destination: (
+          _req: Express.Request,
+          _file: Express.Multer.File,
+          callback: (error: Error | null, destination: string) => void,
+        ) => {
+          callback(null, uploadsDir);
+        },
+        filename: (
+          _req: Express.Request,
+          file: Express.Multer.File,
+          callback: (error: Error | null, filename: string) => void,
+        ) => {
+          const uniqueSuffix = nanoid();
+          const ext = path.extname(file.originalname);
+          const fileName = `${uniqueSuffix}${ext}`;
+          callback(null, fileName);
+        },
+      }),
+      fileFilter: (
+        _req: Express.Request,
+        file: Express.Multer.File,
+        callback: (error: Error | null, acceptFile: boolean) => void,
+      ) => {
+        if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/)) {
+          return callback(new Error('Only image files are allowed!'), false);
+        }
+
+        callback(null, true);
+      },
+      limits: {
+        fileSize: DEFAULT_MAX_FILE_SIZE,
+      },
+    }),
   ],
   controllers: [UsersController],
   providers: [UsersService],

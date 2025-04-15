@@ -25,7 +25,7 @@ import { ParentAddress } from 'src/typeorm/entities/parent-address.entity';
 import { Attendance } from 'src/typeorm/entities/attendance.entity';
 import { Grade } from 'src/typeorm/entities/grade.entity';
 import { Enrollment } from 'src/typeorm/entities/enrollment.entity';
-import { FileStorageService } from '../../shared/services/file-storage.service';
+import { FileStorageService } from '../serve-static/file-storage.service';
 import { GetStudentDto } from './dto/get-student.dto';
 
 @Injectable()

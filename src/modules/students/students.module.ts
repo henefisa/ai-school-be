@@ -4,24 +4,19 @@ import { Student } from 'src/typeorm/entities/student.entity';
 import { StudentsController } from './students.controller';
 import { StudentsService } from './students.service';
 import { UsersModule } from '../users/users.module';
+import { ParentsModule } from '../parents/parents.module';
+import { ServeStaticModule } from '../serve-static/serve-static.module';
 import { MulterModule } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { nanoid } from 'nanoid';
 import * as path from 'path';
-import { Parent } from 'src/typeorm/entities/parent.entity';
-import { Address } from 'src/typeorm/entities/address.entity';
-import { StudentAddress } from 'src/typeorm/entities/student-address.entity';
-import { ParentsModule } from '../parents/parents.module';
-import { ServeStaticModule } from '../serve-static/serve-static.module';
-import { FileStorageService } from '../../shared/services/file-storage.service';
 import { DEFAULT_MAX_FILE_SIZE } from '../serve-static/serve-static.constants';
 
-// Define the uploads directory path
 const uploadsDir = path.join(process.cwd(), 'uploads/students');
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Student, Parent, Address, StudentAddress]),
+    TypeOrmModule.forFeature([Student]),
     UsersModule,
     ParentsModule,
     ServeStaticModule,
@@ -53,6 +48,7 @@ const uploadsDir = path.join(process.cwd(), 'uploads/students');
         if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/)) {
           return callback(new Error('Only image files are allowed!'), false);
         }
+
         callback(null, true);
       },
       limits: {
@@ -61,7 +57,7 @@ const uploadsDir = path.join(process.cwd(), 'uploads/students');
     }),
   ],
   controllers: [StudentsController],
-  providers: [StudentsService, FileStorageService],
+  providers: [StudentsService],
   exports: [StudentsService],
 })
 export class StudentsModule {}

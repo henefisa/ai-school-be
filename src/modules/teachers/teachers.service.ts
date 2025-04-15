@@ -21,7 +21,8 @@ import { Address } from 'src/typeorm/entities/address.entity';
 import { ParentAddress } from 'src/typeorm/entities/parent-address.entity';
 import { User } from 'src/typeorm/entities/user.entity';
 import { GetTeacherDto } from './dto/get-teacher.dto';
-import { FileStorageService } from '../../shared/services/file-storage.service';
+import { FileStorageService } from '../serve-static/file-storage.service';
+
 @Injectable()
 export class TeachersService extends BaseService<Teacher> {
   private readonly logger = new Logger(TeachersService.name);

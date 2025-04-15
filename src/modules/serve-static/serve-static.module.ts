@@ -5,7 +5,7 @@ import {
 } from '@nestjs/serve-static';
 import { join } from 'path';
 import { uploadDirectories } from './serve-static.config';
-import { FileStorageService } from '../../shared/services/file-storage.service';
+import { FileStorageService } from './file-storage.service';
 import { STATIC_FILE_CACHE_DURATION } from './serve-static.constants';
 
 /**
@@ -31,6 +31,7 @@ import { STATIC_FILE_CACHE_DURATION } from './serve-static.constants';
       .map((options) => NestServeStaticModule.forRoot(options)),
   ],
   providers: [FileStorageService],
+  exports: [FileStorageService],
 })
 export class ServeStaticModule implements OnModuleInit {
   private readonly logger = new Logger(ServeStaticModule.name);

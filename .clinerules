@@ -15,6 +15,7 @@ You are a senior TypeScript programmer with experience in the NestJS framework a
 - Using Argon2 instead of Bcrypt for hashing password
 - Using pnpm as package manager
 - When write dto or swagger, make sure that you will add some example value for the field
+- Don't write comment for the import
 
 ### Nomenclature
 

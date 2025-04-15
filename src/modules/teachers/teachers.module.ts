@@ -12,7 +12,6 @@ import { diskStorage } from 'multer';
 import { nanoid } from 'nanoid';
 import * as path from 'path';
 import { ServeStaticModule } from '../serve-static/serve-static.module';
-import { FileStorageService } from '../../shared/services/file-storage.service';
 import { DEFAULT_MAX_FILE_SIZE } from '../serve-static/serve-static.constants';
 
 // Define the uploads directory path
@@ -53,6 +52,7 @@ const uploadsDir = path.join(process.cwd(), 'uploads/teachers');
         if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/)) {
           return callback(new Error('Only image files are allowed!'), false);
         }
+
         callback(null, true);
       },
       limits: {
@@ -60,7 +60,7 @@ const uploadsDir = path.join(process.cwd(), 'uploads/teachers');
       },
     }),
   ],
-  providers: [TeachersService, FileStorageService],
+  providers: [TeachersService],
   controllers: [TeachersController],
   exports: [TeachersService],
 })
