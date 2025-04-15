@@ -100,20 +100,10 @@ export class UpdateTeacherDto {
   @ApiProperty({
     description: 'Street address',
     example: '123 Main Street',
-    required: false,
   })
   @IsString()
   @IsOptional()
-  'contact.addressLine1'?: string;
-
-  @ApiProperty({
-    description: 'Additional address information',
-    example: 'Apartment 4B',
-    required: false,
-  })
-  @IsOptional()
-  @IsString()
-  'contact.addressLine2'?: string;
+  'contact.street'?: string;
 
   @ApiProperty({
     description: 'City',

@@ -29,7 +29,7 @@ export class UsersController {
     return req.user;
   }
 
-  @Patch('me/avatar')
+  @Patch('avatar')
   @UseInterceptors(FileInterceptor('avatar')) // Field name in form-data
   @ApiConsumes('multipart/form-data')
   @ApiBody({
