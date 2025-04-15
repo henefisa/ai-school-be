@@ -15,6 +15,7 @@ import { ParentAddress } from 'src/typeorm/entities/parent-address.entity';
 import { Address } from 'src/typeorm/entities/address.entity';
 import { User } from 'src/typeorm/entities/user.entity';
 import { Role } from 'src/shared/constants';
+import { UsersService } from '../users/users.service';
 import * as argon2 from 'argon2';
 
 @Injectable()
@@ -24,9 +25,8 @@ export class ParentsService extends BaseService<Parent> {
     private readonly parentRepository: Repository<Parent>,
     @InjectRepository(Student)
     private readonly studentRepository: Repository<Student>,
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
     private readonly addressesService: AddressesService,
+    private readonly usersService: UsersService,
   ) {
     super(EntityName.Parent, parentRepository);
   }
@@ -45,6 +45,11 @@ export class ParentsService extends BaseService<Parent> {
 
       const parent = entityManager.create(Parent, parentData);
       const savedParent = await entityManager.save(Parent, parent);
+
+      // Check email availability
+      if (createParentDto.contact.email) {
+        await this.usersService.isEmailAvailable(createParentDto.contact.email);
+      }
 
       // Create user account for parent
       const username = createParentDto.personal.username;

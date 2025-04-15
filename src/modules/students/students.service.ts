@@ -109,7 +109,10 @@ export class StudentsService extends BaseService<Student> {
 
           await entityManager.save(StudentAddress, studentAddress);
 
-          // 5. Create user account
+          // 5. Check email availability and create user account
+          if (groupedData.contact.email) {
+            await this.usersService.isEmailAvailable(groupedData.contact.email);
+          }
           await this.usersService.create(
             {
               username: groupedData.personal.username,

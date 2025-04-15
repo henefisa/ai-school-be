@@ -74,7 +74,10 @@ export class TeachersService extends BaseService<Teacher> {
       const teacher = this.teacherRepository.create(teacherData);
       const createdTeacher = await entityManager.save(Teacher, teacher);
 
-      // Create user account for the teacher
+      // Check email availability and create user account for the teacher
+      if (groupedData.contact.email) {
+        await this.usersService.isEmailAvailable(groupedData.contact.email);
+      }
       await this.usersService.create(
         {
           username: groupedData.personal.username,
