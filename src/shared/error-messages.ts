@@ -10,6 +10,7 @@ export enum EntityName {
   Room = 'room',
   Semester = 'semester',
   Address = 'address',
+  Attendance = 'attendance',
 }
 
 export const ERROR_MESSAGES = {

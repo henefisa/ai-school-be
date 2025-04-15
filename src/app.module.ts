@@ -41,6 +41,7 @@ import { RoomsModule } from './modules/rooms/rooms.module';
 import { ParentsModule } from './modules/parents/parents.module';
 import { AddressesModule } from './modules/addresses/addresses.module';
 import { ServeStaticModule } from './modules/serve-static/serve-static.module';
+import { AttendancesModule } from './modules/attendances/attendances.module';
 
 @Module({
   imports: [
@@ -95,6 +96,7 @@ import { ServeStaticModule } from './modules/serve-static/serve-static.module';
     ParentsModule,
     AddressesModule,
     ServeStaticModule,
+    AttendancesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

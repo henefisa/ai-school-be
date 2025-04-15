@@ -123,4 +123,4 @@ You are a senior TypeScript programmer with experience in the NestJS framework a
 
 ### Formatting
 - Make sure you formatted the file after making changes
-- Run pnpm format:fix if you change any code in a file
+- Run pnpm format:fix if you change any code in a file after do all tasks
