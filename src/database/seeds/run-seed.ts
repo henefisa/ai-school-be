@@ -929,6 +929,8 @@ async function seedParents(): Promise<Parent[]> {
     {
       firstName: 'Michael',
       lastName: 'Brown',
+      dob: new Date('1970-05-10'),
+      gender: Gender.Male,
       relationshipToStudent: RelationshipToStudent.Father,
       contactNumber1: '555-123-4567',
       contactNumber2: '555-765-4321',
@@ -939,6 +941,8 @@ async function seedParents(): Promise<Parent[]> {
     {
       firstName: 'Jennifer',
       lastName: 'Wilson',
+      dob: new Date('1975-08-22'),
+      gender: Gender.Female,
       relationshipToStudent: RelationshipToStudent.Mother,
       contactNumber1: '555-234-5678',
       contactNumber2: undefined,
@@ -949,6 +953,8 @@ async function seedParents(): Promise<Parent[]> {
     {
       firstName: 'David',
       lastName: 'Taylor',
+      dob: new Date('1972-11-03'),
+      gender: Gender.Male,
       relationshipToStudent: RelationshipToStudent.Father,
       contactNumber1: '555-345-6789',
       contactNumber2: undefined,

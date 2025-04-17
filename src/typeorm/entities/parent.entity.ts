@@ -1,6 +1,6 @@
 import { Column, Entity, OneToMany, OneToOne } from 'typeorm';
 import { BaseEntity } from './base.entity';
-import { RelationshipToStudent } from 'src/shared/constants';
+import { Gender, RelationshipToStudent } from 'src/shared/constants';
 import { ParentAddress } from './parent-address.entity';
 import { Student } from './student.entity';
 import { EmergencyContact } from './emergency-contact.entity';
@@ -13,6 +13,12 @@ export class Parent extends BaseEntity {
 
   @Column()
   lastName: string;
+
+  @Column({ nullable: true, type: 'date' })
+  dob: Date;
+
+  @Column({ enum: Gender, type: 'enum', nullable: true })
+  gender: Gender;
 
   @Column({ nullable: true, type: 'enum', enum: RelationshipToStudent })
   relationshipToStudent: RelationshipToStudent;

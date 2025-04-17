@@ -9,12 +9,14 @@ import { User } from 'src/typeorm/entities/user.entity';
 import { EntityManager, FindManyOptions, Repository } from 'typeorm';
 import { GetUsersDto } from './dto/get-users.dto';
 import { BaseService } from 'src/shared/base.service';
-import { EntityName } from 'src/shared/error-messages'; // ERROR_MESSAGES removed as it's unused after refactor
+import { EntityName, ERROR_MESSAGES } from 'src/shared/error-messages';
 import { CreateUserDto } from './dto/create-users.dto';
 import { ExistsException } from 'src/shared/exceptions/exists.exception';
 import { FileStorageService } from '../serve-static/file-storage.service';
 // import * as path from 'path'; // No longer needed after removing URL parsing
 import { uploadDirectories } from '../serve-static/serve-static.config';
+import { Role } from 'src/shared/constants';
+import { NotFoundException } from '@nestjs/common';
 
 @Injectable()
 export class UsersService extends BaseService<User> {
@@ -264,5 +266,104 @@ export class UsersService extends BaseService<User> {
         `Failed to delete uploaded file ${filename} from ${directory}: ${result.error}`,
       );
     }
+  }
+  /**
+   * Retrieves the user's profile including role-specific details.
+   * @param userId - The ID of the user to fetch.
+   * @returns The user object with role-specific profile information.
+   */
+  async getProfile(userId: string) {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      relations: {
+        student: true,
+        teacher: true,
+        parent: true,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException(ERROR_MESSAGES.notFound(EntityName.User));
+    }
+
+    // Base profile data from user entity
+    const profile: {
+      id: string;
+      username: string;
+      email: string;
+      role: Role;
+      photoUrl: string;
+      isActive: boolean;
+      lastLogin: Date | null;
+      firstName: string | null;
+      lastName: string | null;
+      dob: Date | null;
+      gender: string | null;
+      phoneNumber: string | null;
+    } = {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      role: user.role,
+      photoUrl: user.photoUrl,
+      isActive: user.isActive,
+      lastLogin: user.lastLogin,
+      firstName: null,
+      lastName: null,
+      dob: null,
+      gender: null,
+      phoneNumber: null,
+    };
+
+    // Add role-specific profile information
+    switch (user.role) {
+      case Role.Student:
+        if (user.student) {
+          Object.assign(profile, {
+            firstName: user.student.firstName,
+            lastName: user.student.lastName,
+            gender: user.student.gender,
+            phoneNumber: user.student.contactNumber,
+            dob: user.student.dob,
+          });
+        } else {
+          this.logger.warn(`Student profile not found for user ${userId}`);
+        }
+        break;
+
+      case Role.Teacher:
+        if (user.teacher) {
+          Object.assign(profile, {
+            firstName: user.teacher.firstName,
+            lastName: user.teacher.lastName,
+            gender: user.teacher.gender,
+            phoneNumber: user.teacher.contactNumber,
+            dob: user.teacher.dob,
+          });
+        } else {
+          this.logger.warn(`Teacher profile not found for user ${userId}`);
+        }
+        break;
+
+      case Role.Parent:
+        if (user.parent) {
+          Object.assign(profile, {
+            firstName: user.parent.firstName,
+            lastName: user.parent.lastName,
+            phoneNumber: user.parent.contactNumber1,
+            gender: user.parent.gender,
+            dob: user.parent.dob,
+          });
+        } else {
+          this.logger.warn(`Parent profile not found for user ${userId}`);
+        }
+        break;
+
+      default:
+        this.logger.log(`No additional profile data for role ${user.role}`);
+        break;
+    }
+
+    return profile;
   }
 }

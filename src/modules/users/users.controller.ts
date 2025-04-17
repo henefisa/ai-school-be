@@ -25,8 +25,11 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Get('me')
-  getMe(@Req() req: Request) {
-    return req.user;
+  async getMe(@Req() req: Request) {
+    // Assuming req.user contains the authenticated User object from JwtStrategy
+    const userId = req.user.id;
+    // Call service to get user with role-specific profile details
+    return this.usersService.getProfile(userId);
   }
 
   @Patch('avatar')
