@@ -10,7 +10,7 @@ import { nanoid } from 'nanoid';
 import * as path from 'path';
 import { DEFAULT_MAX_FILE_SIZE } from '../serve-static/serve-static.constants';
 
-const uploadsDir = path.join(process.cwd(), 'uploads/users');
+const uploadsDir = path.join(process.cwd(), 'uploads/avatars');
 
 @Module({
   imports: [

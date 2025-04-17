@@ -13,7 +13,6 @@ import { EntityName, ERROR_MESSAGES } from 'src/shared/error-messages';
 import { CreateUserDto } from './dto/create-users.dto';
 import { ExistsException } from 'src/shared/exceptions/exists.exception';
 import { FileStorageService } from '../serve-static/file-storage.service';
-// import * as path from 'path'; // No longer needed after removing URL parsing
 import { uploadDirectories } from '../serve-static/serve-static.config';
 import { Role } from 'src/shared/constants';
 import { NotFoundException } from '@nestjs/common';
@@ -21,6 +20,7 @@ import { NotFoundException } from '@nestjs/common';
 @Injectable()
 export class UsersService extends BaseService<User> {
   private readonly logger: Logger = new Logger(UsersService.name);
+  private readonly uploadsDirectory = 'uploads/avatars';
 
   constructor(
     @InjectRepository(User)
@@ -168,14 +168,11 @@ export class UsersService extends BaseService<User> {
    * @returns The updated User entity.
    */
   async updateAvatar(userId: string, file: Express.Multer.File): Promise<User> {
-    const user = await this.getOneOrThrow({ where: { id: userId } });
-
     if (!file) {
       throw new BadRequestException('Avatar file is required.');
     }
 
-    // File validation (type, size) is handled by ParseFilePipe in the controller.
-
+    const user = await this.getOneOrThrow({ where: { id: userId } });
     const avatarConfig = uploadDirectories.find((dir) =>
       dir.path.includes('avatars'),
     );
@@ -185,14 +182,17 @@ export class UsersService extends BaseService<User> {
         'Server configuration error for avatars.',
       );
     }
-    const uploadDirectory = avatarConfig.path;
     const serveRoute = avatarConfig.route;
 
-    // --- Delete Old Avatar (Best Effort) ---
-    const oldPhotoUrl = user.photoUrl; // Store before potentially overwriting
-    if (oldPhotoUrl) {
-      this.logger.log(`Attempting to delete old avatar: ${oldPhotoUrl}`);
-      this._deleteUploadedFile(oldPhotoUrl, uploadDirectory);
+    // Delete old avatar if it exists
+    if (user.photoUrl) {
+      this.logger.log(`Attempting to delete old avatar: ${user.photoUrl}`);
+
+      const filename = user.photoUrl.split('/').pop();
+
+      if (filename) {
+        this._deleteUploadedFile(filename);
+      }
     }
 
     if (!file.filename) {
@@ -204,46 +204,38 @@ export class UsersService extends BaseService<User> {
         'File processing failed: filename missing.',
       );
     }
+
     const newFilename = file.filename;
-    let savedFilename: string | undefined;
+    let savedFilename: string | undefined = newFilename;
 
     try {
-      // 1. File is assumed to be saved by Multer. Mark it for potential cleanup.
-      savedFilename = newFilename;
-
-      // 2. Generate the URL using the filename from Multer
       const photoUrl = `${serveRoute}/${newFilename}`.replace(/\/+/g, '/');
-
-      // 3. Update user entity in DB
       user.photoUrl = photoUrl;
       await this.userRepository.save(user);
       this.logger.log(`Updated avatar for user ${userId} to ${photoUrl}`);
-
-      // 4. Success: Prevent cleanup
       savedFilename = undefined;
 
       return user;
     } catch (error) {
-      // If any error occurred after file was saved, attempt cleanup
       if (savedFilename) {
         this.logger.warn(
           `Rolling back avatar upload for user ${userId} due to error. Deleting file: ${savedFilename}`,
         );
-        this._deleteUploadedFile(savedFilename, uploadDirectory);
+
+        this._deleteUploadedFile(newFilename);
       }
 
-      // Log and re-throw the original error (or a more specific one if needed)
       this.logger.error(
         `Failed to update avatar for user ${userId}: ${error instanceof Error ? error.message : error}`,
       );
-      // Re-throw the original error or a generic internal server error
+
       if (
         error instanceof InternalServerErrorException ||
         error instanceof BadRequestException
       ) {
         throw error;
       }
-      // Throw a generic internal error for unexpected issues (e.g., DB connection)
+
       throw new InternalServerErrorException(
         'An unexpected error occurred while updating the avatar.',
       );
@@ -253,17 +245,20 @@ export class UsersService extends BaseService<User> {
   /**
    * Private helper to delete an uploaded file, logging warnings on failure.
    * @param filename - The name of the file to delete.
-   * @param directory - The directory containing the file.
    */
-  private _deleteUploadedFile(filename: string, directory: string): void {
-    const result = this.fileStorageService.deleteFile(filename, directory);
+  private _deleteUploadedFile(filename: string): void {
+    const result = this.fileStorageService.deleteFile(
+      filename,
+      this.uploadsDirectory,
+    );
     // Log warnings for cleanup failures, but don't throw an error
+
     if (
       !result.success &&
       result.error !== `File does not exist: ${result.path}` // Ignore "file not found" during cleanup
     ) {
       this.logger.warn(
-        `Failed to delete uploaded file ${filename} from ${directory}: ${result.error}`,
+        `Failed to delete uploaded file ${filename} from ${this.uploadsDirectory}: ${result.error}`,
       );
     }
   }

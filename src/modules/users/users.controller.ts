@@ -4,7 +4,7 @@ import {
   Get,
   MaxFileSizeValidator,
   ParseFilePipe,
-  Patch,
+  Post,
   Req,
   UploadedFile,
   UseGuards,
@@ -32,7 +32,7 @@ export class UsersController {
     return this.usersService.getProfile(userId);
   }
 
-  @Patch('avatar')
+  @Post('avatar')
   @UseInterceptors(FileInterceptor('avatar')) // Field name in form-data
   @ApiConsumes('multipart/form-data')
   @ApiBody({
